@@ -1,0 +1,26 @@
+{
+    "manifest_version": 3,
+    "name": "Spotlight Productivity",
+    "description": "A Chrome extension for enhancing productivity with a Pomodoro timer, website blocker, and task manager.",
+    "version": "1.0",
+    "permissions": [
+      "activeTab",
+      "storage",
+      "declarativeContent",
+      "tabs"
+    ],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": "images/spotlight copy.png"
+    },
+    
+    "icons": {
+      "16": "images/spotlight copy.png",
+      "48": "images/spotlight copy.png",
+      "128": "images/spotlight copy.png"
+    }
+  }
+  
