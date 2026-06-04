@@ -1,0 +1,51 @@
+{
+  "candidate": {
+    "name": "Aneesh Srirambhatla",
+    "email": "aneeshsri@berkeley.edu",
+    "school": "UC Berkeley",
+    "major": "Data Science",
+    "graduation_year": 2027,
+    "graduation_month": "May"
+  },
+  "role_keywords": [
+    "data science",
+    "data scientist",
+    "product analyst",
+    "product analytics",
+    "machine learning",
+    "ml engineer",
+    "ai engineer",
+    "artificial intelligence",
+    "business intelligence",
+    "bi analyst",
+    "data analyst",
+    "product strategy",
+    "product management",
+    "analytics engineer",
+    "applied scientist",
+    "research scientist",
+    "quantitative analyst"
+  ],
+  "preferred_locations": [
+    "San Francisco",
+    "Bay Area",
+    "New York",
+    "Seattle",
+    "Boston",
+    "Remote"
+  ],
+  "target_companies": [
+    "Stripe", "Figma", "Notion", "Airtable", "Scale AI", "Cohere",
+    "Anthropic", "OpenAI", "Databricks", "Snowflake", "dbt Labs",
+    "Palantir", "Amplitude", "Mixpanel", "Segment", "Looker",
+    "Meta", "Google", "Apple", "Netflix", "Airbnb", "Lyft", "Uber",
+    "LinkedIn", "Salesforce", "HubSpot", "Datadog", "Grafana"
+  ],
+  "excluded_companies": [],
+  "excluded_keywords": [
+    "senior", "staff", "principal", "director", "manager",
+    "10+ years", "8+ years", "7+ years"
+  ],
+  "listing_types": ["internship", "new_grad"],
+  "min_score_threshold": 40
+}
