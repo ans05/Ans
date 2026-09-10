@@ -1,0 +1,64 @@
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #1d2130 0%, #0f1115 70%);
+  color: #f2f3f5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: 24px;
+}
+.wrap { max-width: 520px; width: 100%; text-align: center; }
+.eyebrow {
+  margin: 0 0 8px;
+  color: #ff5a3c;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+h1 { margin: 0 0 24px; font-size: 26px; font-weight: 600; word-break: break-word; }
+.timer {
+  margin: 0;
+  font-size: 72px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+}
+.sub { margin: 4px 0 32px; color: #8b919e; }
+.tasks {
+  text-align: left;
+  background: #181b22;
+  border: 1px solid #262a33;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+.tasks h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #8b919e;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.tasks ul { list-style: none; margin: 0; padding: 0; }
+.tasks li { padding: 6px 0; border-bottom: 1px solid #262a33; }
+.tasks li:last-child { border-bottom: none; }
+.tasks li.done { color: #8b919e; text-decoration: line-through; }
+.tasks li.empty { color: #8b919e; font-style: italic; }
+.actions { display: flex; gap: 10px; justify-content: center; }
+button {
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  background: #ff5a3c;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+button:hover { filter: brightness(1.1); }
+button.ghost { background: transparent; border: 1px solid #262a33; color: #8b919e; font-weight: 500; }
+button.ghost:hover { color: #f2f3f5; filter: none; }

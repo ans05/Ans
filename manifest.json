@@ -1,26 +1,24 @@
 {
-    "manifest_version": 3,
-    "name": "Spotlight Productivity",
-    "description": "A Chrome extension for enhancing productivity with a Pomodoro timer, website blocker, and task manager.",
-    "version": "1.0",
-    "permissions": [
-      "activeTab",
-      "storage",
-      "declarativeContent",
-      "tabs"
-    ],
-    "background": {
-      "service_worker": "background.js"
-    },
-    "action": {
-      "default_popup": "popup.html",
-      "default_icon": "images/spotlight copy.png"
-    },
-    
-    "icons": {
-      "16": "images/spotlight copy.png",
-      "48": "images/spotlight copy.png",
-      "128": "images/spotlight copy.png"
-    }
+  "manifest_version": 3,
+  "name": "Lock In",
+  "description": "Lock in: start a focus session, block distracting sites until it ends, and knock out your tasks.",
+  "version": "2.0",
+  "permissions": [
+    "storage",
+    "tabs",
+    "alarms",
+    "notifications"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "images/spotlight.png"
+  },
+  "icons": {
+    "16": "images/spotlight.png",
+    "48": "images/spotlight.png",
+    "128": "images/spotlight.png"
   }
-  
+}
