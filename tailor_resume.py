@@ -8,13 +8,12 @@ Usage:
     python3 tailor_resume.py job.txt "Figma"        # optional company name for filename
 
 Requires:
-    pip install anthropic weasyprint
+    pip install anthropic fpdf2
     export ANTHROPIC_API_KEY=sk-ant-...
 """
 
-import sys, os, json, re, textwrap, pathlib, datetime
+import sys, os, json, re, pathlib
 import anthropic
-from weasyprint import HTML, CSS
 
 # ── Base resume data ─────────────────────────────────────────────────────────
 
@@ -174,135 +173,187 @@ Rules:
     return json.loads(raw)
 
 
-# ── HTML template ─────────────────────────────────────────────────────────────
 
-def build_html(tailored: dict) -> str:
-    def esc(s):
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+# ── PDF renderer (fpdf2, pure Python) ────────────────────────────────────────
 
-    def exp_block(e):
-        bullets_html = "\n".join(f"<li>{esc(b)}</li>" for b in e["bullets"])
-        return f"""
-<div class="row">
-  <span class="l">{esc(e['org'])}</span>
-  <span class="r">{esc(e['dates'])}</span>
-</div>
-<div class="row sub">
-  <span class="l">{esc(e['role'])}</span>
-  <span class="r">{esc(e['location'])}</span>
-</div>
-<ul>{bullets_html}</ul>"""
+SERIF_CANDIDATES = {
+    # macOS
+    "mac": {
+        "": "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
+        "B": "/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf",
+        "I": "/System/Library/Fonts/Supplemental/Times New Roman Italic.ttf",
+        "BI": "/System/Library/Fonts/Supplemental/Times New Roman Bold Italic.ttf",
+    },
+    # Linux (Liberation Serif is metric-compatible with Times New Roman)
+    "linux": {
+        "": "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+        "B": "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+        "I": "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf",
+        "BI": "/usr/share/fonts/truetype/liberation/LiberationSerif-BoldItalic.ttf",
+    },
+    # Windows
+    "win": {
+        "": "C:/Windows/Fonts/times.ttf",
+        "B": "C:/Windows/Fonts/timesbd.ttf",
+        "I": "C:/Windows/Fonts/timesi.ttf",
+        "BI": "C:/Windows/Fonts/timesbi.ttf",
+    },
+}
 
-    def proj_block(p):
-        bullets_html = "\n".join(f"<li>{esc(b)}</li>" for b in p["bullets"])
-        return f"""
-<div class="proj-row">
-  <span class="l">{esc(p['name'])} &nbsp;<em>| {esc(p['tech'])}</em></span>
-  <span class="r">{esc(p['dates'])}</span>
-</div>
-<ul>{bullets_html}</ul>"""
 
-    def skills_html(s):
-        lines = ""
-        for cat, vals in s.items():
-            lines += f'<div class="skill-line"><strong>{esc(cat)}:</strong> {esc(vals)}</div>\n'
-        return lines
+def _register_font(pdf) -> str:
+    for paths in SERIF_CANDIDATES.values():
+        if all(pathlib.Path(p).exists() for p in paths.values()):
+            for style, p in paths.items():
+                pdf.add_font("Serif", style=style, fname=p)
+            return "Serif"
+    # Built-in Times: Latin-1 only, so drop characters it can't encode
+    return "Times"
 
-    exp_blocks = "\n".join(exp_block(e) for e in tailored["experience"])
-    proj_blocks = "\n".join(proj_block(p) for p in tailored["projects"])
-    skill_block = skills_html(tailored["skills"])
 
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
-  * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{
-    font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-    font-size: 10pt;
-    line-height: 1.28;
-    color: #000;
-    background: #fff;
-    padding: 0.42in 0.58in;
-  }}
-  .name {{
-    text-align: center;
-    font-size: 23pt;
-    font-variant: small-caps;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    margin-bottom: 1pt;
-  }}
-  .contact {{
-    text-align: center;
-    font-size: 9pt;
-    margin-bottom: 4pt;
-  }}
-  .contact a {{ color: #000; text-decoration: none; }}
-  .sec {{
-    font-size: 10.5pt;
-    font-weight: 700;
-    border-bottom: 0.8pt solid #000;
-    padding-bottom: 1pt;
-    margin-top: 5pt;
-    margin-bottom: 2pt;
-  }}
-  .row {{
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }}
-  .row .l {{ font-weight: 700; font-size: 10pt; }}
-  .row .r {{ font-size: 9.2pt; white-space: nowrap; }}
-  .row.sub .l {{ font-style: italic; font-weight: 400; font-size: 9.5pt; }}
-  .row.sub .r {{ font-style: italic; font-size: 9.2pt; }}
-  ul {{ margin: 1pt 0 3pt 0; padding-left: 13pt; }}
-  ul li {{ font-size: 9.6pt; line-height: 1.32; margin-bottom: 0.5pt; }}
-  .edu-degree {{ font-style: italic; font-size: 9.5pt; margin: 0.5pt 0; }}
-  .edu-line {{ font-size: 9.6pt; margin: 1pt 0; }}
-  .edu-line strong {{ font-weight: 700; }}
-  .proj-row {{
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }}
-  .proj-row .l {{ font-weight: 700; font-size: 10pt; }}
-  .proj-row .l em {{ font-weight: 400; font-style: italic; }}
-  .proj-row .r {{ font-size: 9.2pt; white-space: nowrap; }}
-  .skill-line {{ font-size: 9.6pt; margin: 0.8pt 0; }}
-  .skill-line strong {{ font-weight: 700; }}
-</style>
-</head>
-<body>
+def _ascii_safe(s: str, font: str) -> str:
+    if font != "Times":
+        return s
+    return s.replace("–", "-").replace("—", "-").replace("•", "-").replace("’", "'").replace("&", "&")
 
-<div class="name">{esc(PROFILE['name'])}</div>
-<div class="contact">
-  {esc(PROFILE['phone'])} &nbsp;&#9656;&nbsp;
-  <a href="mailto:{esc(PROFILE['email'])}">{esc(PROFILE['email'])}</a> &nbsp;&#9656;&nbsp;
-  <a href="https://{esc(PROFILE['linkedin'])}">{esc(PROFILE['linkedin'])}</a>
-</div>
 
-<div class="sec">Education</div>
-<div class="row">
-  <span class="l">{esc(EDUCATION['school'])}</span>
-  <span class="r">{esc(EDUCATION['grad'])}</span>
-</div>
-<div class="edu-degree">{esc(EDUCATION['degree'])}</div>
-<div class="edu-line"><strong>Relevant Coursework:</strong> {esc(EDUCATION['coursework'])}</div>
+def _render(tailored: dict, scale: float):
+    from fpdf import FPDF
 
-<div class="sec">Experience</div>
-{exp_blocks}
+    pdf = FPDF(unit="pt", format="letter")
+    pdf.set_auto_page_break(auto=True, margin=28)
+    font = _register_font(pdf)
+    S = lambda s: _ascii_safe(s, font)
 
-<div class="sec">Projects</div>
-{proj_blocks}
+    LM, RM, TM = 42, 42, 34
+    W = pdf.w - LM - RM
+    pdf.set_margins(LM, TM, RM)
+    pdf.add_page()
 
-<div class="sec">Technical Skills</div>
-{skill_block}
+    # sizes (all scaled to fit one page)
+    f = lambda pt: pt * scale
+    LH = lambda pt: pt * scale * 1.24   # line height for a given font size
 
-</body>
-</html>"""
+    def text_right(y, s, size, style=""):
+        pdf.set_font(font, style, f(size))
+        pdf.text(pdf.w - RM - pdf.get_string_width(s), y, s)
+
+    def row(left, right, lsize, rsize, lstyle="B", rstyle=""):
+        y = pdf.get_y() + f(lsize)
+        pdf.set_font(font, lstyle, f(lsize))
+        pdf.text(LM, y, S(left))
+        text_right(y, S(right), rsize, rstyle)
+        pdf.set_y(y + f(1.5))
+
+    def section(title):
+        pdf.set_y(pdf.get_y() + f(4))
+        y = pdf.get_y() + f(10.5)
+        pdf.set_font(font, "B", f(10.5))
+        pdf.text(LM, y, S(title))
+        pdf.set_line_width(0.7)
+        pdf.line(LM, y + f(2.5), pdf.w - RM, y + f(2.5))
+        pdf.set_y(y + f(5))
+
+    def bullets(items):
+        size = 9.6
+        indent = f(11)
+        pdf.set_font(font, "", f(size))
+        for b in items:
+            y = pdf.get_y()
+            pdf.text(LM + f(3), y + f(size) * 0.82, S("•"))
+            pdf.set_xy(LM + indent, y)
+            pdf.multi_cell(W - indent, LH(size), S(b), align="L")
+        pdf.set_y(pdf.get_y() + f(2))
+
+    def line(txt, size=9.6, style="", bold_prefix=None):
+        # a single wrapped paragraph, optionally with a bold "Label:" prefix
+        pdf.set_font(font, style, f(size))
+        if bold_prefix:
+            pdf.set_x(LM)
+            pdf.set_font(font, "B", f(size))
+            pdf.write(LH(size), S(bold_prefix + " "))
+            pdf.set_font(font, style, f(size))
+            pdf.write(LH(size), S(txt))
+            pdf.ln(LH(size))
+        else:
+            pdf.set_x(LM)
+            pdf.multi_cell(W, LH(size), S(txt), align="L")
+
+    # ── Name (faux small caps) ──
+    name = PROFILE["name"]
+    pieces = []
+    for word in name.split():
+        pieces.append((word[0].upper(), 23))
+        pieces.append((word[1:].upper() + " ", 17.5))
+    pdf.set_font(font, "B", 1)
+    total = 0
+    for s, sz in pieces:
+        pdf.set_font(font, "B", f(sz))
+        total += pdf.get_string_width(s)
+    x = (pdf.w - total) / 2
+    y = TM + f(23)
+    for s, sz in pieces:
+        pdf.set_font(font, "B", f(sz))
+        pdf.text(x, y, s)
+        x += pdf.get_string_width(s)
+    pdf.set_y(y + f(3))
+
+    # ── Contact ──
+    contact = f"{PROFILE['phone']}   |   {PROFILE['email']}   |   {PROFILE['linkedin']}"
+    pdf.set_font(font, "", f(9.5))
+    cy = pdf.get_y() + f(9.5)
+    pdf.text((pdf.w - pdf.get_string_width(contact)) / 2, cy, S(contact))
+    pdf.set_y(cy + f(1))
+
+    # ── Education ──
+    section("Education")
+    row(EDUCATION["school"], EDUCATION["grad"], 10, 9.2)
+    line(EDUCATION["degree"], 9.5, "I")
+    line(EDUCATION["coursework"], 9.6, "", bold_prefix="Relevant Coursework:")
+
+    # ── Experience ──
+    section("Experience")
+    for e in tailored["experience"]:
+        row(e["org"], e["dates"], 10, 9.2)
+        row(e["role"], e["location"], 9.5, 9.2, lstyle="I", rstyle="I")
+        bullets(e["bullets"])
+
+    # ── Projects ──
+    section("Projects")
+    for p in tailored["projects"]:
+        y = pdf.get_y() + f(10)
+        pdf.set_font(font, "B", f(10))
+        pdf.text(LM, y, S(p["name"]))
+        nx = LM + pdf.get_string_width(S(p["name"]))
+        pdf.set_font(font, "I", f(9.5))
+        pdf.text(nx + f(4), y, S(f"| {p['tech']}"))
+        text_right(y, S(p["dates"]), 9.2)
+        pdf.set_y(y + f(1.5))
+        bullets(p["bullets"])
+
+    # ── Skills ──
+    section("Technical Skills")
+    for cat, vals in tailored["skills"].items():
+        line(vals, 9.6, "", bold_prefix=f"{cat}:")
+
+    return pdf
+
+
+def write_pdf(tailored: dict, company_hint: str):
+    safe = re.sub(r'[^a-zA-Z0-9_-]', '_', company_hint)
+    out_path = pathlib.Path(f"Aneesh_Srirambhatla_{safe}.pdf")
+
+    # Shrink type until it fits on one page
+    for scale in (1.0, 0.97, 0.94, 0.91, 0.88, 0.85):
+        pdf = _render(tailored, scale)
+        if pdf.pages_count == 1:
+            break
+
+    pdf.output(str(out_path))
+    pages = pdf.pages_count
+    print(f"Done → {out_path.resolve()}  ({pages} page{'s' if pages != 1 else ''}, scale {scale:.2f})")
+    if pages > 1:
+        print("WARNING: still over one page even at minimum scale — trim a bullet or two.")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -320,19 +371,16 @@ def main():
         job_desc = pathlib.Path(sys.argv[1]).read_text()
         company_hint = sys.argv[2] if len(sys.argv) >= 3 else pathlib.Path(sys.argv[1]).stem
     else:
-        print("Paste the job description below. Press Enter twice then Ctrl+D when done:\n")
-        lines = []
-        try:
-            while True:
-                line = input()
-                lines.append(line)
-        except EOFError:
-            pass
-        job_desc = "\n".join(lines)
+        print("Paste the job description below, then press Ctrl+D on an empty line:\n")
+        job_desc = sys.stdin.read()
         company_hint = sys.argv[1] if len(sys.argv) >= 2 else "role"
 
     if not job_desc.strip():
         print("Error: no job description provided.")
+        sys.exit(1)
+
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("Error: ANTHROPIC_API_KEY is not set. Run:  export ANTHROPIC_API_KEY=sk-ant-...")
         sys.exit(1)
 
     print(f"Tailoring resume for: {company_hint} ...")
@@ -341,19 +389,6 @@ def main():
     safe = re.sub(r'[^a-zA-Z0-9_-]', '_', company_hint)
     pathlib.Path(f"tailored_{safe}.json").write_text(json.dumps(tailored, indent=2))
     write_pdf(tailored, company_hint)
-
-
-def write_pdf(tailored: dict, company_hint: str):
-    safe = re.sub(r'[^a-zA-Z0-9_-]', '_', company_hint)
-    out_path = pathlib.Path(f"Aneesh_Srirambhatla_{safe}.pdf")
-    doc = HTML(string=build_html(tailored)).render(
-        stylesheets=[CSS(string="@page { size: letter; margin: 0; }")]
-    )
-    doc.write_pdf(str(out_path))
-    pages = len(doc.pages)
-    print(f"Done → {out_path.resolve()}  ({pages} page{'s' if pages != 1 else ''})")
-    if pages > 1:
-        print("WARNING: resume spilled onto a second page — trim a bullet or two.")
 
 
 if __name__ == "__main__":

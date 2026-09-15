@@ -1,6 +1,6 @@
 # Resume Tailor
 
-`tailor_resume.py` rewrites Aneesh's resume bullets for a specific job description using the Claude API and renders a one-page PDF in the standard Berkeley/LaTeX-style format.
+`tailor_resume.py` rewrites Aneesh's resume bullets for a specific job description using the Claude API and renders a one-page PDF in the standard Berkeley/LaTeX-style format. PDF rendering is pure Python (fpdf2) — no system packages needed. If the output runs long, the script shrinks the type in small steps until it fits one page.
 
 ## Setup (once)
 
@@ -13,12 +13,10 @@ pip install -r requirements.txt
 export ANTHROPIC_API_KEY=sk-ant-...  # from console.anthropic.com
 ```
 
-macOS needs WeasyPrint's native libs: `brew install pango libffi`.
-Ubuntu/Debian: `sudo apt install libpango-1.0-0 libpangoft2-1.0-0`.
-
 ## Tailor for a job
 
-1. Copy the job posting text into a file, e.g. `jobs/figma.txt`.
+1. Copy the job posting in your browser, then save it to a file. On macOS:
+   `pbpaste > jobs/figma.txt` (type this command; do not paste the posting into the terminal).
 2. Run:
 
 ```bash
