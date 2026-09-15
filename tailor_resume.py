@@ -308,6 +308,13 @@ def build_html(tailored: dict) -> str:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    # Offline mode: python3 tailor_resume.py --from-json tailored.json "Figma"
+    if len(sys.argv) >= 3 and sys.argv[1] == "--from-json":
+        tailored = json.loads(pathlib.Path(sys.argv[2]).read_text())
+        company_hint = sys.argv[3] if len(sys.argv) >= 4 else pathlib.Path(sys.argv[2]).stem
+        write_pdf(tailored, company_hint)
+        return
+
     # Read job description
     if len(sys.argv) >= 2 and pathlib.Path(sys.argv[1]).exists():
         job_desc = pathlib.Path(sys.argv[1]).read_text()
@@ -331,16 +338,22 @@ def main():
     print(f"Tailoring resume for: {company_hint} ...")
     tailored = tailor_with_claude(job_desc)
 
-    html = build_html(tailored)
+    safe = re.sub(r'[^a-zA-Z0-9_-]', '_', company_hint)
+    pathlib.Path(f"tailored_{safe}.json").write_text(json.dumps(tailored, indent=2))
+    write_pdf(tailored, company_hint)
 
-    # Save PDF
+
+def write_pdf(tailored: dict, company_hint: str):
     safe = re.sub(r'[^a-zA-Z0-9_-]', '_', company_hint)
     out_path = pathlib.Path(f"Aneesh_Srirambhatla_{safe}.pdf")
-    HTML(string=html).write_pdf(
-        str(out_path),
+    doc = HTML(string=build_html(tailored)).render(
         stylesheets=[CSS(string="@page { size: letter; margin: 0; }")]
     )
-    print(f"Done → {out_path.resolve()}")
+    doc.write_pdf(str(out_path))
+    pages = len(doc.pages)
+    print(f"Done → {out_path.resolve()}  ({pages} page{'s' if pages != 1 else ''})")
+    if pages > 1:
+        print("WARNING: resume spilled onto a second page — trim a bullet or two.")
 
 
 if __name__ == "__main__":
