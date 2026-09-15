@@ -9,7 +9,16 @@
 <body>
   <h1>Spotlight</h1>
 
+  <!-- Tab Navigation -->
+  <div id="tab-nav">
+    <button class="tab-btn active" data-tab="pomodoro-tab">Timer</button>
+    <button class="tab-btn" data-tab="tasks-tab">Tasks</button>
+    <button class="tab-btn" data-tab="blocker-tab">Blocker</button>
+    <button class="tab-btn" data-tab="jobs-tab">Jobs</button>
+  </div>
+
   <!-- Pomodoro Timer -->
+  <div id="pomodoro-tab" class="tab-content active">
   <div id="pomodoro">
     <h2>Pomodoro Timer</h2>
     <p id="timer">25:00</p>
@@ -17,21 +26,55 @@
     <button id="reset-timer">Reset</button>
   </div>
 
+  </div><!-- end pomodoro-tab -->
+
   <!-- Task Manager -->
+  <div id="tasks-tab" class="tab-content">
   <div id="tasks">
     <h2>Task Manager</h2>
     <input type="text" id="new-task" placeholder="New task">
     <button id="add-task">Add</button>
     <ul id="task-list"></ul>
   </div>
+  </div><!-- end tasks-tab -->
 
   <!-- Website Blocker -->
+  <div id="blocker-tab" class="tab-content">
   <div id="blocker">
     <h2>Website Blocker</h2>
     <input type="text" id="block-url" placeholder="Enter URL">
     <button id="block-site">Block</button>
+    <button id="clear-blocked-list">Clear All</button>
     <ul id="blocked-list"></ul>
   </div>
+  </div><!-- end blocker-tab -->
+
+  <!-- Job Autofill -->
+  <div id="jobs-tab" class="tab-content">
+    <h2>Job Autofill</h2>
+    <p class="jobs-hint">Save your info once, then click <strong>Autofill</strong> on any Simplify.jobs listing.</p>
+    <label>Full Name</label>
+    <input type="text" id="j-name" placeholder="Jane Doe">
+    <label>Email</label>
+    <input type="text" id="j-email" placeholder="jane@example.com">
+    <label>Phone</label>
+    <input type="text" id="j-phone" placeholder="+1 555-555-5555">
+    <label>LinkedIn URL</label>
+    <input type="text" id="j-linkedin" placeholder="https://linkedin.com/in/...">
+    <label>GitHub / Portfolio URL</label>
+    <input type="text" id="j-website" placeholder="https://github.com/...">
+    <label>City, State</label>
+    <input type="text" id="j-location" placeholder="San Francisco, CA">
+    <label>Years of Experience</label>
+    <input type="text" id="j-experience" placeholder="2">
+    <label>Resume (plain text — used for cover letter hints)</label>
+    <textarea id="j-resume" rows="5" placeholder="Paste your resume text here..."></textarea>
+    <div id="jobs-actions">
+      <button id="save-profile">Save Profile</button>
+      <button id="autofill-now">Autofill Current Tab</button>
+    </div>
+    <p id="jobs-status"></p>
+  </div><!-- end jobs-tab -->
 
   <script src="popup.js"></script>
   
