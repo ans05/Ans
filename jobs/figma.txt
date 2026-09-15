@@ -1,0 +1,26 @@
+Data Science Intern (2027)
+San Francisco, CA • New York, NY
+
+Figma is growing our team of passionate creatives and builders on a mission to make design accessible to all. Figma's platform helps teams bring ideas to life—whether you're brainstorming, creating a prototype, translating designs into code, or iterating with AI. From idea to product, Figma empowers teams to streamline workflows, move faster, and work together in real time from anywhere in the world.
+
+Figma's Data Science team partners across product, engineering, design, marketing, sales, and operations to help Figma make better decisions with data. As an intern on our team, you'll work on technical challenges that have real impact on our product and business, and we're looking for interns with strong foundations in coding and statistics and who are clear communicators with both technical and non-technical audiences.
+
+What you'll do at Figma:
+- Own a scoped project end to end—from framing the question with Product, Engineering, Design, and Data Science partners through delivering the work—with support from a manager and mentor.
+- Analyze user behavior, product performance, or business data to uncover insights and translate them into recommendations for business
+- Design and evaluate experiments and develop metrics that help teams understand the impact of product changes.
+- Build models to understand user behavior and predict growth
+- Build and improve data pipelines and tools that make product data more scalable and accessible
+- Focus areas may include analytics, experimentation, or infrastructure - based on your interests and business needs
+
+Some projects you could work on:
+- Analyze how people adopt and use a new or existing Figma product experience, define meaningful success metrics, and turn patterns in engagement and retention into product recommendations.
+- Build and validate a new analytical method or tool that expands how Figma's Data Science team solves recurring problems.
+- Study marketing or customer-journey data to identify drivers of acquisition, conversion, or retention.
+- Develop and evaluate forecasts or models that help teams anticipate user or business trends and plan more effectively
+
+We'd love to hear from you if you have:
+- Experience using SQL and a scripting language such as Python or R to clean, explore, and analyze data through research, projects, or prior work.
+- A solid foundation in statistics and quantitative reasoning, with exposure to areas such as experimentation, forecasting, statistical modeling, causal inference, or data modeling.
+- The ability to structure open-ended questions, validate your analysis, and connect findings to product or business decisions.
+- Curiosity, initiative, and strong communication and collaboration skills with both technical and non-technical partners.
