@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Tailor</title>
+  <link rel="stylesheet" href="tailor.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">RT</span>
+      <span class="brand-name">Resume Tailor</span>
+    </div>
+    <button id="open-settings" class="btn ghost" type="button">Settings</button>
+  </header>
+
+  <main class="layout">
+    <section class="panel input-panel">
+      <label class="field">
+        <span class="label">Company</span>
+        <input id="company" type="text" placeholder="Duolingo" autocomplete="off">
+      </label>
+
+      <label class="field grow">
+        <span class="label">Job description</span>
+        <textarea id="jd" placeholder="Paste the posting here, or click the extension icon while viewing one."></textarea>
+        <span class="hint" id="jd-source"></span>
+      </label>
+
+      <div class="actions">
+        <button id="tailor" class="btn primary" type="button">Tailor with Claude</button>
+        <button id="use-base" class="btn ghost" type="button">Preview base resume</button>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+    </section>
+
+    <section class="panel preview-panel">
+      <div class="preview-head">
+        <span class="label">Preview <span class="hint">— click any bullet to edit</span></span>
+        <button id="download" class="btn primary" type="button" disabled>Download PDF</button>
+      </div>
+      <div id="paper" class="paper">
+        <p class="empty">Your tailored resume will appear here.</p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="settings">
+    <form method="dialog" class="settings-form">
+      <h2>Settings</h2>
+
+      <label class="field">
+        <span class="label">Anthropic API key</span>
+        <input id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+        <span class="hint">Stored only in this extension on this computer. Get one at console.anthropic.com.</span>
+      </label>
+
+      <label class="field grow">
+        <span class="label">Base resume (JSON)</span>
+        <textarea id="base-resume" spellcheck="false"></textarea>
+        <span class="hint">Add every true bullet you have — more than fit on a page is fine. The model picks the best three per role.</span>
+      </label>
+
+      <div class="actions">
+        <button id="reset-resume" class="btn ghost" type="button">Reset to default</button>
+        <span class="spacer"></span>
+        <button class="btn ghost" type="button" id="cancel-settings">Cancel</button>
+        <button class="btn primary" type="button" id="save-settings">Save</button>
+      </div>
+      <p id="settings-status" class="status"></p>
+    </form>
+  </dialog>
+
+  <script src="lib/jspdf.umd.min.js"></script>
+  <script src="resume-data.js"></script>
+  <script src="pdf.js"></script>
+  <script src="tailor.js"></script>
+</body>
+</html>
