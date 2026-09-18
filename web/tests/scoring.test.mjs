@@ -15,12 +15,16 @@ test("canonical result: counts derive from statuses; missing and matched are dis
     { statement: "Write product specifications", category: "responsibility", capabilities: ["product_specifications"] },
     { statement: "Conduct user research", category: "responsibility", capabilities: ["user_research"] },
   ], DEFAULT_RESUME);
-  const ids = (arr) => arr.map((i) => i.capability);
-  assert.deepEqual(ids(r.missing), ["product_specifications"]);
+  // Since the bank gained "translated behavioral insights into product requirements", specifications is partial, not missing.
+  assert.equal(r.items.find((i) => i.capability === "product_specifications").status, "partially_matched");
+  assert.deepEqual(r.missing, []);
   assert.equal(r.items.filter((i) => i.status === "matched").length, r.counts.matched);
   assert.equal(r.counts.missing + r.counts.matched + r.counts.partially_matched, r.counts.scorable);
   assert.ok(!r.missing.some((m) => r.items.find((i) => i.capability === m.capability && i.status === "matched")));
-  assert.ok(r.score < 100, "a missing item must pull the score below 100");
+  assert.ok(r.score < 100, "a partial item must pull the score below 100");
+  const r2 = S.evaluate([{ statement: "Write go-to-market briefs", category: "responsibility", capabilities: ["gtm_briefs"] }, { statement: "Fluent in Mandarin", category: "required_qualification", capabilities: [], keywords: ["Mandarin"] }], DEFAULT_RESUME);
+  assert.deepEqual(r2.missing.map((i) => i.statement), ["Fluent in Mandarin"]);
+  assert.ok(!r2.items.some((i) => i.statement === "Fluent in Mandarin" && i.status === "matched"));
 });
 
 // 2. not_scorable requirements do not affect the score.
@@ -62,7 +66,7 @@ test("launched alone is not stakeholder communication", () => {
 test("compound requirement splits into separately scored capabilities", () => {
   const r = S.evaluate([{ statement: "Write specifications, experimentation plans and go-to-market briefs", category: "responsibility", capabilities: ["product_specifications", "experimentation_plans", "gtm_briefs"] }], DEFAULT_RESUME);
   const by = Object.fromEntries(r.items.map((i) => [i.capability, i.status]));
-  assert.equal(by.product_specifications, "missing");
+  assert.equal(by.product_specifications, "partially_matched", "requirements work without a written spec");
   assert.equal(by.experimentation_plans, "matched");
   assert.equal(by.gtm_briefs, "partially_matched");
   assert.equal(r.items.length, 3);
@@ -101,7 +105,7 @@ test("GoalKeeper ranks first for a consumer PM capability set", () => {
   const pmCaps = ["product_ownership", "user_research", "experimentation_plans", "product_decisions", "product_strategy_roadmap", "consumer_product", "product_launch", "product_analytics"];
   const ranked = S.rankEntries(DEFAULT_RESUME, pmCaps, "product");
   assert.equal(ranked[0].name, "Project GoalKeeper");
-  assert.equal(S.detectRoleType("Product Manager Intern — Roblox\nSan Mateo"), "product");
+  assert.equal(S.detectRoleType("Product Manager Intern — Roblox\nSan Mateo"), "product_management");
   // Even with the full Roblox capability set (where Siemens has broad analysis evidence), PM weighting puts GoalKeeper first.
   const roblox = ["degree_related_field", "cross_functional_collaboration", "product_specifications", "experimentation_plans", "gtm_briefs", "user_research", "data_analysis", "market_research", "competitive_analysis", "senior_pm_partnership", "product_strategy_roadmap", "scale_millions", "stakeholder_communication", "written_communication", "consumer_product", "sql", "product_decisions"];
   assert.equal(S.rankEntries(DEFAULT_RESUME, roblox, "product")[0].name, "Project GoalKeeper");

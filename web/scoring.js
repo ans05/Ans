@@ -4,11 +4,10 @@
 // One canonical result from evaluate() drives every number and section the
 // UI shows. Statuses: matched | partially_matched | missing | not_scorable.
 
-const SCORING_VERSION = "3.0";
+const SCORING_VERSION = "4.0";
 
 // Weights (percent). Buckets with no scorable items redistribute their weight
 // proportionally to the buckets that do have items.
-const WEIGHTS = { required: 50, preferred: 10, responsibility: 20, quality: 10, ordering: 10 };
 const STATUS_VALUE = { matched: 1, partially_matched: 0.5, missing: 0 };
 
 // ── Requirement categories ──────────────────────────────────────────────
@@ -176,9 +175,11 @@ const CAPABILITIES = {
   statistics: { label: "Statistics and quantitative reasoning", full: (t) => /\b(regression|hypothesis test\w*|statistical|a\/b test\w*|experimental design)\b/i.test(t), partial: (t) => /\b(quantitative|analy[sz]\w*)\b/i.test(t), reasonFull: "statistical method named", reasonPartial: "quantitative work without a named method" },
   experimentation: { label: "Experimentation", full: (t) => VERB.design.test(t) && /\b(a\/b test\w*|experiments?|experimentation)\b/i.test(t), partial: (t) => /\b(a\/b|experiment\w*|hypothes[ie]s|pilot)\b/i.test(t), reasonFull: "designed/ran experiments", reasonPartial: "experiments mentioned" },
   causal_inference: { label: "Causal inference", full: (t) => /\b(causal inference|difference-in-differences|instrumental variable|propensity|treatment effect)\b/i.test(t), partial: (t) => /\b(a\/b test\w*|randomi[sz]ed|experiments?)\b/i.test(t), reasonFull: "causal method named", reasonPartial: "randomized experiments imply causal reasoning" },
-  forecasting: { label: "Forecasting", full: (t) => /\b(forecast\w*|time.series)\b/i.test(t), partial: (t) => /\b(predict\w*)\b/i.test(t), reasonFull: "forecasting named", reasonPartial: "predictions without forecasting" },
+  forecasting: { label: "Forecasting", full: (t) => /\b(forecast\w*|time.series)\b/i.test(t), partial: (t) => /\b(predict(ed|ing|ions?)?\s+(growth|demand|trends?|churn|revenue|usage|volume|adoption))\b/i.test(t), reasonFull: "forecasting named", reasonPartial: "predicted a business trend without a named forecasting method" },
   data_engineering: { label: "Data pipelines", full: (t) => /\b(etl|data pipelines?|pipelines?|ingest\w*)\b/i.test(t) && VERB.build.test(t), partial: (t) => /\b(pipeline|etl)\b/i.test(t), reasonFull: "built data pipelines", reasonPartial: "pipelines mentioned" },
   ml_evaluation: { label: "Model evaluation / ML", full: (t) => /\b(model evaluation|benchmark\w*|llm|training data(set)?|error analysis|recommendation (system|platform)|machine learning|ml\b)/i.test(t), partial: (t) => /\b(model\w*)\b/i.test(t), reasonFull: "ML evaluation or system work", reasonPartial: "models mentioned" },
+  ai_evaluation: { label: "LLM / AI output evaluation", full: (t) => /\b(llm|ai-generated|model outputs?|instruction-following|correctness criteria|prompt)\b/i.test(t) && /\b(evaluat\w*|scored|graded|assessed|rubric)/i.test(t), partial: (t) => /\b(llm|ai)\b/i.test(t), reasonFull: "evaluated AI/LLM outputs against criteria", reasonPartial: "AI mentioned without evaluation work" },
+  data_visualization: { label: "Data visualization", full: (t) => /\b(visuali[sz]\w*|dashboards?|charts?|plots?|tableau|looker|power bi|matplotlib|plotly)\b/i.test(t), reasonFull: "visualization or dashboard work named" },
   dashboards: { label: "Dashboards / BI tools", full: (t) => /\b(power bi|tableau|looker|dashboards?)\b/i.test(t), reasonFull: "BI tool named" },
   mobile: { label: "Mobile development", full: (t) => /\b(ios|android|swift|kotlin|mobile app)\b/i.test(t), reasonFull: "mobile platform named" },
   leadership: { label: "Leadership", full: (t) => /\b(led|founder|founded|owned|initiated)\b/i.test(t), partial: (t) => /\b(coordinat\w*|organi[sz]ed)\b/i.test(t), reasonFull: "led or founded", reasonPartial: "coordinated" },
@@ -300,23 +301,69 @@ function bulletQuality(text) {
   return { verb, strong, length, number, scope, outcome, pass, notes };
 }
 
-// ── Relevance ranking of entries ────────────────────────────────────────
-// Score each entry by how many scored capabilities its bullets evidence
-// (full = 1, partial = 0.5), weighted by role type. For product roles,
-// evidence of owning, shipping, and experimenting on a product outranks
-// supporting analysis. Used for ordering and for tailoring emphasis.
-const ROLE_WEIGHTS = {
-  product: { product_ownership: 1.5, product_launch: 1.5, consumer_product: 1.5, experimentation_plans: 1.5, experimentation: 1.5, product_decisions: 1.5, product_analytics: 1.25, user_research: 1.25, product_strategy_roadmap: 1.25 },
-  data: { data_analysis: 1.5, statistics: 1.5, sql: 1.5, python: 1.25, experimentation: 1.5, causal_inference: 1.5, data_engineering: 1.25, ml_evaluation: 1.25 },
-  engineering: { data_engineering: 1.5, python: 1.5, sql: 1.25, product_launch: 1.25, mobile: 1.25 },
+// ── Track classification ────────────────────────────────────────────────
+// One primary track per posting, from the title (weighted 3×) and the body.
+const TRACKS = {
+  ds_ml: { label: "Data Science / ML", signals: [/\bdata scien\w*/i, /\bmachine learning\b/i, /\bml (engineer|intern|model)/i, /\bstatistic\w*/i, /\bregression\b/i, /\bforecast\w*/i, /\bcausal\b/i, /\bpython\b/i, /\bmodel(s|ing)?\b/i, /\bdata pipelines?\b/i] },
+  product_analytics: { label: "Product Analytics / BI", signals: [/\bproduct analy\w*/i, /\bbusiness intelligence\b/i, /\banalyst\b/i, /\banalytics\b/i, /\bdashboards?\b/i, /\bsql\b/i, /\btableau|looker|power bi\b/i, /\bkpis?\b/i, /\bmetrics\b/i, /\bfunnel\b/i] },
+  product_management: { label: "Product Management", signals: [/\bproduct manager\b/i, /\bproduct management\b/i, /\bassociate product\b/i, /\bapm\b/i, /\broadmaps?\b/i, /\bspecifications?\b|\bprds?\b/i, /\buser research\b/i, /\bcross-functional\b/i, /\bfeatures?\b/i, /\bgo-to-market\b/i] },
+  ai_product: { label: "AI Product / Technical PM", signals: [/\bai product\b/i, /\btechnical product manager\b/i, /\btpm\b/i, /\bllms?\b/i, /\bgenerative ai\b|\bgenai\b/i, /\bai[- ]powered\b/i, /\bmodel (evaluation|quality)\b/i, /\bprompt\w*/i, /\bai features?\b/i, /\bmachine learning product\b/i] },
+  product_strategy: { label: "Product Strategy / Growth", signals: [/\bproduct strateg\w*/i, /\bgrowth\b/i, /\bstrategy (intern|analyst|associate)\b/i, /\bmarket research\b/i, /\bcompetitive (analysis|landscape)\b/i, /\bgo-to-market\b/i, /\bacquisition|retention|conversion\b/i, /\bbusiness case\b/i, /\bpartnerships?\b/i, /\bexpansion\b/i] },
 };
-function detectRoleType(jd) {
-  const s = String(jd || "").slice(0, 600);
-  if (/\b(product manager|product management|associate product)\b|\bPM\b/i.test(s)) return "product";
-  if (/\b(data scien\w*|analyst|analytics|machine learning|\bml\b)/i.test(s)) return "data";
-  if (/\b(software engineer|swe|developer|engineering intern)\b/i.test(s)) return "engineering";
-  return "general";
+
+function classifyTrack(jd) {
+  const text = String(jd || "");
+  const title = text.split("\n").find((l) => l.trim()) || "";
+  const scores = {};
+  for (const [id, t] of Object.entries(TRACKS)) {
+    let s = 0;
+    t.signals.forEach((re, i) => {
+      const w = i < 4 ? 2 : 1;                       // the first signals are the strongest identifiers
+      if (re.test(title)) s += 3 * w;
+      const n = (text.match(new RegExp(re.source, "gi")) || []).length;
+      s += Math.min(n, 4) * w * 0.5;
+    });
+    scores[id] = Math.round(s * 10) / 10;
+  }
+  // Disambiguation: AI product needs AI signals on top of PM signals; strategy needs strategy language on top of PM.
+  if (scores.ai_product > 0 && scores.ai_product < scores.product_management * 0.6) scores.ai_product *= 0.5;
+  const ordered = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const [track, top] = ordered[0];
+  const second = ordered[1]?.[1] || 0;
+  return { track: top > 0 ? track : "product_management", label: TRACKS[top > 0 ? track : "product_management"].label, confidence: top === 0 ? "low" : top - second >= 4 ? "high" : top - second >= 1.5 ? "medium" : "low", scores };
 }
+
+// Track-specific experience order (entry ids). GoalKeeper is a project section; when it is
+// ranked first the Projects section leads, otherwise Projects follows Experience.
+const TRACK_ORDER = {
+  ds_ml: ["flourish", "haas", "mercor", "siemens", "goalkeeper"],
+  product_analytics: ["flourish", "goalkeeper", "haas", "siemens", "mercor"],
+  product_management: ["siemens", "goalkeeper", "flourish", "haas", "mercor"],
+  ai_product: ["flourish", "mercor", "goalkeeper", "siemens", "haas"],
+  product_strategy: ["siemens", "goalkeeper", "flourish", "haas", "mercor"],
+};
+
+// Verified skills to lead with per track (only ones present in the bank are ever listed).
+const TRACK_SKILL_PRIORITY = {
+  ds_ml: ["Python", "SQL", "R", "pandas", "NumPy", "BigQuery", "statistical modeling", "regression analysis", "hypothesis testing", "A/B testing", "ETL pipelines", "data visualization", "model evaluation", "error analysis"],
+  product_analytics: ["SQL", "Python", "R", "pandas", "A/B testing", "product analytics", "experimentation", "regression analysis", "statistical modeling", "ETL pipelines", "data visualization", "Power BI"],
+  product_management: ["product strategy", "customer discovery", "user research", "product roadmapping", "experimentation", "product analytics", "market research", "competitive analysis", "cross-functional collaboration", "A/B testing", "SQL"],
+  ai_product: ["LLM evaluation", "model evaluation", "error analysis", "product strategy", "experimentation", "user research", "product roadmapping", "Python", "SQL", "A/B testing", "product analytics", "cross-functional collaboration"],
+  product_strategy: ["product strategy", "market research", "competitive analysis", "customer discovery", "customer journey mapping", "product roadmapping", "user research", "experimentation", "product analytics", "cross-functional collaboration", "SQL"],
+};
+
+// Capability weights per track (used for bullet selection and relevance ordering checks).
+const TRACK_CAP_WEIGHTS = {
+  ds_ml: { data_analysis: 1.5, statistics: 1.5, sql: 1.5, python: 1.5, r_language: 1.25, experimentation: 1.5, causal_inference: 1.5, forecasting: 1.25, data_engineering: 1.5, ml_evaluation: 1.5, ai_evaluation: 1.25 },
+  product_analytics: { data_analysis: 1.5, sql: 1.5, product_analytics: 1.5, experimentation: 1.5, experimentation_plans: 1.5, statistics: 1.25, product_decisions: 1.5, dashboards: 1.5, data_engineering: 1.25 },
+  product_management: { product_ownership: 1.5, product_launch: 1.5, consumer_product: 1.25, experimentation_plans: 1.5, product_decisions: 1.5, product_analytics: 1.25, user_research: 1.5, product_strategy_roadmap: 1.5, cross_functional_collaboration: 1.25, product_specifications: 1.5 },
+  ai_product: { ml_evaluation: 1.5, ai_evaluation: 1.5, product_ownership: 1.25, product_launch: 1.25, experimentation_plans: 1.25, product_decisions: 1.5, user_research: 1.25, product_strategy_roadmap: 1.25, data_engineering: 1.25 },
+  product_strategy: { product_strategy_roadmap: 1.5, market_research: 1.5, competitive_analysis: 1.5, user_research: 1.25, stakeholder_communication: 1.25, cross_functional_collaboration: 1.25, product_decisions: 1.25, product_analytics: 1.25, gtm_briefs: 1.5 },
+};
+const ROLE_WEIGHTS = { product: TRACK_CAP_WEIGHTS.product_management, data: TRACK_CAP_WEIGHTS.ds_ml, engineering: { data_engineering: 1.5, python: 1.5, sql: 1.25, product_launch: 1.25, mobile: 1.25 }, ...TRACK_CAP_WEIGHTS };
+function detectRoleType(jd) { return classifyTrack(jd).track; }
+
+// ── Relevance ranking of entries ────────────────────────────────────────
 function rankEntries(doc, capIds, roleType = "general") {
   const weights = ROLE_WEIGHTS[roleType] || {};
   const entries = [...(doc.experience || []).map((e) => ({ kind: "experience", id: e.id, name: e.org, ref: e })), ...(doc.projects || []).map((p) => ({ kind: "project", id: p.id, name: p.name, ref: p }))];
@@ -332,9 +379,145 @@ function rankEntries(doc, capIds, roleType = "general") {
   }).sort((a, b) => b.score - a.score);
 }
 
+// Order entries by the track's fixed order; unknown ids keep their relative position at the end.
+function orderForTrack(doc, track) {
+  const order = TRACK_ORDER[track] || [];
+  const pos = (id) => { const i = order.indexOf(id); return i < 0 ? 99 : i; };
+  const experience = [...(doc.experience || [])].sort((a, b) => pos(a.id) - pos(b.id));
+  const projects = [...(doc.projects || [])].sort((a, b) => pos(a.id) - pos(b.id));
+  const firstId = order[0];
+  const sectionOrder = projects.some((p) => p.id === firstId) ? ["projects", "experience"] : ["experience", "projects"];
+  return { experience, projects, sectionOrder };
+}
+
+// ── Chronology ──────────────────────────────────────────────────────────
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
+function parseEnd(dates) {
+  const s = String(dates || "");
+  if (/present|current/i.test(s)) return 999912;
+  const parts = s.split(/[–—-]/).map((x) => x.trim()).filter(Boolean);
+  const last = parts[parts.length - 1] || "";
+  const m = /([A-Za-z]{3,})\.?\s+(\d{4})/.exec(last) || /(\d{4})/.exec(last);
+  if (!m) return null;
+  return m.length === 3 ? Number(m[2]) * 100 + (MONTHS[m[1].slice(0, 4).toLowerCase()] || MONTHS[m[1].slice(0, 3).toLowerCase()] || 0) : Number(m[1]) * 100;
+}
+function isChronological(entries) {
+  const ends = entries.map((e) => parseEnd(e.dates)).filter((x) => x !== null);
+  for (let i = 1; i < ends.length; i++) if (ends[i] > ends[i - 1]) return false;
+  return true;
+}
+
+// ── Duplication and copying ─────────────────────────────────────────────
+const STOP = new Set(["a", "an", "the", "and", "or", "of", "to", "for", "in", "on", "with", "by", "from", "that", "into", "across", "as", "at", "its", "their"]);
+function contentTokens(t) { return new Set(String(t).toLowerCase().replace(/[^a-z0-9%+ ]/g, " ").split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w))); }
+function jaccard(a, b) { const A = contentTokens(a), B = contentTokens(b); let inter = 0; for (const x of A) if (B.has(x)) inter++; const uni = A.size + B.size - inter; return uni ? inter / uni : 0; }
+function metricsIn(t) { return [...String(t).matchAll(/\d[\d,]*(?:\.\d+)?%?\+?/g)].map((m) => m[0]); }
+
+// Two bullets are semantic duplicates when their source facts share a result key, when they share
+// the same headline metric and overlap heavily, or when their content overlap is very high.
+function duplicateBullets(entry, bank) {
+  const facts = new Map((bank?.entries || []).flatMap((e) => e.facts.map((f) => [f.id, f])));
+  const out = [];
+  const bl = entry.bullets || [], ids = entry.factIds || [];
+  for (let i = 0; i < bl.length; i++) for (let j = i + 1; j < bl.length; j++) {
+    const fi = facts.get(ids[i]), fj = facts.get(ids[j]);
+    const sameResult = fi?.result && fj?.result && fi.result === fj.result;
+    const mi = metricsIn(bl[i]), mj = metricsIn(bl[j]);
+    const sharedMetric = mi.some((m) => /%/.test(m) && mj.includes(m));
+    const sim = jaccard(bl[i], bl[j]);
+    // A shared percentage result counts as a duplicate when the bullets also share the metric's subject (e.g. "session duration").
+    const sharedSubject = sharedMetric && [...contentTokens(bl[i])].filter((w) => contentTokens(bl[j]).has(w) && !/^\d/.test(w)).length >= 2;
+    if (sameResult || (sharedMetric && (sim >= 0.25 || sharedSubject)) || sim >= 0.6) out.push({ i, j, reason: sameResult ? `both center on the same result (${fi.result})` : sharedMetric ? "repeat the same headline metric" : "near-identical wording" });
+  }
+  return out;
+}
+
+function copiedFromPosting(bullet, jd, n = 6) {
+  if (!jd) return false;
+  const words = String(bullet).toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+  const hay = " " + String(jd).toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ") + " ";
+  for (let i = 0; i + n <= words.length; i++) if (hay.includes(" " + words.slice(i, i + n).join(" ") + " ")) return true;
+  return false;
+}
+
+// ── Deterministic bullet selection (fallback and post-processing) ────────
+// Picks the strongest non-duplicative facts for a track: capability hits × track weights,
+// then drops any fact whose result key or wording duplicates an already chosen one.
+function selectFacts(entry, capIds, track, n) {
+  const weights = TRACK_CAP_WEIGHTS[track] || {};
+  const scored = entry.facts.map((f) => {
+    const units = resumeUnits({ experience: [{ org: entry.org, bullets: [f.text] }], projects: [], education: {}, skills: {} });
+    let s = 0;
+    for (const c of capIds) { const r = evaluateCapability(c, units); const w = weights[c] || 1; if (r.status === "matched") s += w; else if (r.status === "partially_matched") s += 0.5 * w; }
+    for (const t of f.tags || []) if (weights[t]) s += 0.25 * weights[t];
+    return { f, s };
+  }).sort((a, b) => b.s - a.s);
+  const chosen = [];
+  for (const { f } of scored) {
+    if (chosen.length >= n) break;
+    const dup = chosen.some((c) => (c.result && c.result === f.result) || jaccard(c.text, f.text) >= 0.6);
+    if (!dup) chosen.push(f);
+  }
+  return chosen;
+}
+
+function dedupeSelection(entry, bank) {
+  const dups = duplicateBullets(entry, bank);
+  const drop = new Set(dups.map((d) => d.j));
+  if (!drop.size) return { entry, dropped: [] };
+  const keep = entry.bullets.map((_, i) => i).filter((i) => !drop.has(i));
+  return { entry: { ...entry, bullets: keep.map((i) => entry.bullets[i]), factIds: keep.map((i) => (entry.factIds || [])[i]) }, dropped: dups.map((d) => ({ text: entry.bullets[d.j], reason: d.reason })) };
+}
+
+// ── Skills selection ────────────────────────────────────────────────────
+const PRODUCT_SKILL_TEMPLATE = {
+  Product: ["product strategy", "roadmapping", "user research", "customer journey mapping", "competitive analysis", "A/B testing", "product analytics"],
+  Technical: ["Python", "SQL", "R", "Swift", "Power BI", "PostgreSQL", "Git", "Microsoft Azure"],
+  "Data & AI": ["experiment design", "regression analysis", "ETL pipelines", "recommendation systems", "model evaluation", "LLM evaluation"],
+};
+const REQUESTED_TOOLS = /\b(tableau|looker|spark|pyspark|bigquery|snowflake|dbt|airflow|figma|jira|excel|scala|java|c\+\+|kotlin|tensorflow|pytorch|scikit-learn|aws|gcp|azure|docker|kubernetes|power bi)\b/g;
+function selectSkills(bank, track, jd, max = 12) {
+  const verified = bank.verifiedSkills || [];
+  if (["product_management", "product_strategy", "ai_product"].includes(track)) {
+    const have = new Set(verified.map((v) => v.name.toLowerCase()));
+    const skills = Object.entries(PRODUCT_SKILL_TEMPLATE).map(([cat, names]) => ({ cat, vals: names.filter((n) => have.has(n.toLowerCase())).join(", ") })).filter((s) => s.vals);
+    const requested = [...String(jd || "").toLowerCase().matchAll(REQUESTED_TOOLS)].map((m) => m[1]);
+    return { skills, unsupported: [...new Set(requested)].filter((r) => !have.has(r)) };
+  }
+  const priority = TRACK_SKILL_PRIORITY[track] || [];
+  const jdl = String(jd || "").toLowerCase();
+  const scoreOf = (s) => {
+    const p = priority.findIndex((x) => x.toLowerCase() === s.name.toLowerCase());
+    const inJd = jdl.includes(s.name.toLowerCase()) ? 1 : 0;
+    return (p >= 0 ? (priority.length - p) : 0) + inJd * 3;
+  };
+  const chosen = verified.map((s) => ({ ...s, score: scoreOf(s) })).filter((s) => s.score > 0 || priority.length === 0).sort((a, b) => b.score - a.score);
+  const groups = {};
+  for (const s of chosen.slice(0, max)) (groups[s.group] ||= []).push(s.name);
+  // Anything the posting names that the bank cannot back is reported, never listed.
+  const requested = [...jdl.matchAll(/\b(tableau|looker|spark|pyspark|bigquery|snowflake|dbt|airflow|figma|jira|excel|scala|java|c\+\+|kotlin|tensorflow|pytorch|scikit-learn|aws|gcp|azure|docker|kubernetes|power bi)\b/g)].map((m) => m[1]);
+  const unsupported = [...new Set(requested)].filter((r) => !verified.some((v) => v.name.toLowerCase() === r));
+  return { skills: Object.entries(groups).map(([cat, vals]) => ({ cat, vals: vals.join(", ") })), unsupported };
+}
+
+// ── Missing-item verdicts ───────────────────────────────────────────────
+const CAP_KIND = { scale_millions: "scale", degree_related_field: "eligibility" };
+function missingVerdict(item, bank) {
+  const cap = item.capability;
+  const kind = CAP_KIND[cap] || (CAPABILITIES[cap] ? "activity" : "skill");
+  const prohibited = (bank?.entries || []).some((e) => (e.prohibited || []).some((p) => cap && normalize(p).includes(normalize(cap.replace(/_/g, " ")).split(" ")[0])));
+  if (kind === "scale" || prohibited) return { verdict: "Not evidenced — do not add", why: kind === "scale" ? "the posting describes the employer's scale; no résumé claim can truthfully supply it" : "a related claim is explicitly prohibited in the evidence bank" };
+  return { verdict: "Needs candidate confirmation", why: kind === "skill" ? "a tool or skill the candidate may have used but has not documented" : "the candidate may have done this in a role already on the résumé; it is not documented" };
+}
+
 // ── The canonical evaluation ────────────────────────────────────────────
+const WEIGHTS = { required: 40, preferred: 20, strength: 20, relevance: 10, clarity: 10 };
+
 function evaluate(extracted, doc, opts = {}) {
-  const roleType = opts.roleType || "general";
+  const track = opts.track || opts.roleType || classifyTrack(opts.jd || "").track;
+  const bank = opts.bank || null;
+  const jd = opts.jd || "";
+  const relevanceOrdering = opts.relevanceOrdering !== false;
   const units = resumeUnits(doc);
   const items = [];
   for (const raw of extracted) {
@@ -344,72 +527,135 @@ function evaluate(extracted, doc, opts = {}) {
       items.push({ statement: raw.statement, category, status: "not_scorable", capability: null, results: [], reason: { logistics: "eligibility/logistics — not a résumé-keyword item", company_language: "company or mission language — not a candidate requirement", subjective_trait: "subjective trait — cannot be verified from a résumé" }[category] });
       continue;
     }
-    // Compound statements are scored per capability so each can be matched/partial/missing on its own.
     const capList = caps.length ? caps : ["__keywords__"];
     for (const c of capList) {
       const r = c === "__keywords__" ? evaluateCapability("__unknown__", units, raw.keywords || []) : evaluateCapability(c, units, raw.keywords || []);
-      items.push({ statement: raw.statement, category, status: r.status, capability: c === "__keywords__" ? null : c, label: r.label, evidence: r.evidence, where: r.where, reason: r.reason, confidence: r.confidence, evidenceType: r.evidenceType, results: [r] });
+      const item = { statement: raw.statement, category, status: r.status, capability: c === "__keywords__" ? null : c, label: c === "__keywords__" ? raw.statement : r.label, evidence: r.evidence, where: r.where, reason: r.reason, confidence: r.confidence, evidenceType: r.evidenceType === "direct" ? "direct" : r.evidenceType ? "equivalent" : null, results: [r] };
+      if (r.status === "missing") Object.assign(item, missingVerdict(item, bank));
+      if (!item.capability && r.status === "missing") Object.assign(item, { verdict: "Needs candidate confirmation", why: "outside the evidence vocabulary; phrase not found on the résumé" });
+      items.push(item);
     }
   }
 
   const bucket = (cat) => items.filter((i) => i.category === cat);
   const cov = (arr) => (arr.length ? arr.reduce((a, i) => a + STATUS_VALUE[i.status], 0) / arr.length : null);
   const req = bucket("required_qualification"), pref = bucket("preferred_qualification"), resp = bucket("responsibility");
+  // Responsibilities count with the required bucket at half weight per item (they describe the job, not the bar).
+  const reqPlus = [...req, ...resp];
+  const reqCov = req.length + resp.length ? (req.reduce((a, i) => a + STATUS_VALUE[i.status], 0) + 0.5 * resp.reduce((a, i) => a + STATUS_VALUE[i.status], 0)) / (req.length + 0.5 * resp.length) : null;
 
-  // Bullet quality
-  const bullets = units.filter((u) => u.idx >= 0).map((u) => ({ where: u.where, text: u.text, ...bulletQuality(u.text) }));
-  const quality = bullets.length ? bullets.filter((b) => b.pass).length / bullets.length : 1;
+  // Evidence strength: how convincing the matches are (direct high > equivalent > partial), plus bullet specificity.
+  const scorable = items.filter((i) => i.status !== "not_scorable");
+  const strengthOf = (i) => i.status === "matched" ? (i.evidenceType === "direct" ? (i.confidence === "high" ? 1 : 0.8) : 0.6) : i.status === "partially_matched" ? (i.confidence === "low" ? 0.25 : 0.4) : 0;
+  const matchedItems = scorable.filter((i) => i.status !== "missing");
+  const matchStrength = matchedItems.length ? matchedItems.reduce((a, i) => a + strengthOf(i), 0) / matchedItems.length : 0;
+  const bullets = units.filter((u) => u.idx >= 0).map((u) => ({ where: u.where, text: u.text, entry: u.entry, ...bulletQuality(u.text), copied: copiedFromPosting(u.text, jd), long: u.text.length > 180 }));
+  const specificity = bullets.length ? bullets.filter((b) => b.number || (b.scope && b.outcome)).length / bullets.length : 0;
+  const unsupported = opts.unsupportedClaims || 0;
+  const strength = Math.max(0, (0.6 * matchStrength + 0.4 * specificity) - 0.1 * unsupported);
 
-  // Ordering: entries with the most evidence for scored capabilities should come first
-  const scoredCaps = items.filter((i) => i.capability).map((i) => i.capability);
-  const ranked = rankEntries(doc, [...new Set(scoredCaps)], roleType);
-  const exps = ranked.filter((r) => r.kind === "experience");
-  const firstExp = doc.experience?.[0];
-  const bestExp = exps[0];
-  const bestOverall = ranked[0];
-  const projectsFirst = doc.sectionOrder?.[0] === "projects";
-  let ordering = 1, orderingNote = "strongest evidence appears first";
-  if (bestExp && firstExp && bestExp.id !== (firstExp.id || firstExp.org) && bestExp.name !== firstExp.org) { ordering -= 0.5; orderingNote = `${bestExp.name} has the most evidence among experiences but is not first`; }
-  if (bestOverall && bestOverall.kind === "project" && !projectsFirst && bestOverall.score > (bestExp?.score || 0)) { ordering -= 0.5; orderingNote += (ordering < 1 && orderingNote !== "strongest evidence appears first" ? "; " : "") + `${bestOverall.name} (project) is the strongest evidence but Projects is placed after Experience`; }
-  ordering = Math.max(0, ordering);
+  // Relevance & ordering: track order respected (or chronology when relevance ordering is off), strongest evidence early.
+  const expectedOrder = orderForTrack(doc, track);
+  const actualExp = (doc.experience || []).map((e) => e.id);
+  const expectedExp = expectedOrder.experience.map((e) => e.id);
+  const orderMatches = JSON.stringify(actualExp) === JSON.stringify(expectedExp);
+  const sectionMatches = (doc.sectionOrder?.[0] || "experience") === expectedOrder.sectionOrder[0];
+  const chrono = isChronological(doc.experience || []);
+  let relevance, relevanceNote;
+  if (relevanceOrdering) { relevance = (orderMatches ? 0.7 : 0.35) + (sectionMatches ? 0.3 : 0); relevanceNote = orderMatches ? `entries follow the ${TRACKS[track]?.label || track} order` : `entries do not follow the ${TRACKS[track]?.label || track} order (${expectedExp.join(" → ")})`; if (!sectionMatches) relevanceNote += `; ${expectedOrder.sectionOrder[0] === "projects" ? "Projects should lead" : "Experience should lead"}`; }
+  else { relevance = chrono ? 1 : 0.4; relevanceNote = chrono ? "chronological order is correct" : "entries are not in reverse-chronological order"; }
 
-  // Weights with redistribution for empty buckets
-  const present = { required: req.length > 0, preferred: pref.length > 0, responsibility: resp.length > 0, quality: true, ordering: true };
+  // Clarity, concision, duplication, copying.
+  const dupPairs = [...(doc.experience || []), ...(doc.projects || [])].flatMap((en) => duplicateBullets(en, bank).map((d) => ({ entry: en.org || en.name, a: en.bullets[d.i], b: en.bullets[d.j], reason: d.reason })));
+  const weak = bullets.filter((b) => !b.strong || !b.verb).length;
+  const copied = bullets.filter((b) => b.copied).length;
+  const longCount = bullets.filter((b) => b.long).length;
+  const clarity = Math.max(0, 1 - 0.15 * dupPairs.length - 0.1 * weak - 0.15 * copied - 0.03 * longCount);
+
+  const present = { required: reqPlus.length > 0, preferred: pref.length > 0, strength: true, relevance: true, clarity: true };
   const totalPresent = Object.entries(WEIGHTS).filter(([k]) => present[k]).reduce((a, [, w]) => a + w, 0);
   const w = Object.fromEntries(Object.entries(WEIGHTS).map(([k, v]) => [k, present[k] ? (v * 100) / totalPresent : 0]));
-
   const components = {
-    required: { weight: w.required, value: cov(req) ?? 0, label: `${count(req, "matched")} matched, ${count(req, "partially_matched")} partial, ${count(req, "missing")} missing of ${req.length} required` },
-    preferred: { weight: w.preferred, value: cov(pref) ?? 0, label: pref.length ? `${count(pref, "matched")} matched, ${count(pref, "partially_matched")} partial, ${count(pref, "missing")} missing of ${pref.length} preferred` : "none in posting" },
-    responsibility: { weight: w.responsibility, value: cov(resp) ?? 0, label: resp.length ? `${count(resp, "matched")} matched, ${count(resp, "partially_matched")} partial, ${count(resp, "missing")} missing of ${resp.length} responsibilities` : "none in posting" },
-    quality: { weight: w.quality, value: quality, label: `${bullets.filter((b) => b.pass).length}/${bullets.length} bullets pass (strong verb + metric, or scope + outcome)` },
-    ordering: { weight: w.ordering, value: ordering, label: orderingNote },
+    required: { weight: w.required, value: reqCov ?? 0, label: `${count(req, "matched")}/${req.length} required matched (+${count(req, "partially_matched")} partial); responsibilities ${count(resp, "matched")}/${resp.length} (+${count(resp, "partially_matched")} partial) at half weight` },
+    preferred: { weight: w.preferred, value: cov(pref) ?? 0, label: pref.length ? `${count(pref, "matched")}/${pref.length} preferred matched (+${count(pref, "partially_matched")} partial)` : "none in posting" },
+    strength: { weight: w.strength, value: strength, label: `match strength ${matchStrength.toFixed(2)} (direct > equivalent > partial), bullet specificity ${specificity.toFixed(2)}${unsupported ? `, ${unsupported} unsupported claim${unsupported > 1 ? "s" : ""}` : ""}` },
+    relevance: { weight: w.relevance, value: relevance, label: relevanceNote },
+    clarity: { weight: w.clarity, value: clarity, label: `${dupPairs.length} duplicate pair${dupPairs.length === 1 ? "" : "s"}, ${weak} weak bullet${weak === 1 ? "" : "s"}, ${copied} copied from posting, ${longCount} over 180 chars` },
   };
   for (const c of Object.values(components)) c.points = c.weight * c.value;
-  const score = Math.round(Object.values(components).reduce((a, c) => a + c.points, 0));
+  let readiness = Math.round(Object.values(components).reduce((a, c) => a + c.points, 0));
+  if (unsupported > 0) readiness = Math.min(readiness, 60);
+  const atsPool = scorable;
+  const ats = atsPool.length ? Math.round((atsPool.reduce((a, i) => a + STATUS_VALUE[i.status], 0) / atsPool.length) * 100) : 0;
 
-  const scorable = items.filter((i) => i.status !== "not_scorable");
   return {
-    version: SCORING_VERSION,
-    score,
-    components,
-    items,
-    counts: {
-      scorable: scorable.length,
-      matched: count(scorable, "matched"),
-      partially_matched: count(scorable, "partially_matched"),
-      missing: count(scorable, "missing"),
-      not_scorable: items.length - scorable.length,
-    },
+    version: SCORING_VERSION, track, trackLabel: TRACKS[track]?.label || track,
+    score: readiness, readiness, ats, components, items,
+    counts: { scorable: scorable.length, matched: count(scorable, "matched"), partially_matched: count(scorable, "partially_matched"), missing: count(scorable, "missing"), not_scorable: items.length - scorable.length },
     missing: scorable.filter((i) => i.status === "missing"),
     partial: scorable.filter((i) => i.status === "partially_matched"),
     notScorable: items.filter((i) => i.status === "not_scorable"),
-    bullets,
-    ranked,
-    explanation: `Evidence Match Score ${score}/100 = ${Object.entries(components).filter(([, c]) => c.weight > 0).map(([k, c]) => `${k} ${c.weight.toFixed(0)}×${c.value.toFixed(2)}`).join(" + ")}. Internal evidence-coverage estimate; not a prediction of any employer's ATS or interview outcome.`,
+    bullets, duplicates: dupPairs, expectedOrder: expectedExp, sectionOrderExpected: expectedOrder.sectionOrder, chronological: chrono,
+    ranked: rankEntries(doc, [...new Set(items.filter((i) => i.capability).map((i) => i.capability))], track),
+    explanation: `Recruiter-readiness ${readiness}/100 = ${Object.entries(components).filter(([, c]) => c.weight > 0).map(([k, c]) => `${k} ${c.weight.toFixed(0)}×${c.value.toFixed(2)}`).join(" + ")}${unsupported ? " (capped at 60 while unsupported claims remain)" : ""}. ATS coverage ${ats}/100 = matched + ½ partial over ${atsPool.length} scorable items. Internal estimates, not an employer's decision.`,
   };
 }
 function count(arr, status) { return arr.filter((i) => i.status === status).length; }
+
+// ── Quality control before export ───────────────────────────────────────
+// severity "block" prevents export; "warn" allows it with a notice.
+function qualityControl(doc, { jd = "", bank = null, pdf = null, relevanceOrdering = true } = {}) {
+  const issues = [];
+  const add = (severity, message) => issues.push({ severity, message });
+  if (pdf) { if (pdf.overflow || (pdf.pages && pdf.pages > 1)) add("block", "Résumé runs past one page — remove or shorten a bullet."); if (pdf.clipped?.length) add("warn", `Text was truncated to fit: ${pdf.clipped.join("; ")}`); }
+  const entries = [...(doc.experience || []), ...(doc.projects || [])];
+  const facts = new Map((bank?.entries || []).flatMap((e) => e.facts.map((f) => [f.id, { f, e }])));
+  const bankEntries = new Map((bank?.entries || []).map((e) => [e.id, e]));
+  for (const en of entries) {
+    const be = bankEntries.get(en.id);
+    if (be) {
+      const title = en.role || (en.tech || "").split("|")[0].trim();
+      const allowed = [be.role, ...(be.altTitles || [])].map((t) => t.trim());
+      if (title && !allowed.includes(title.trim())) add("block", `${en.org || en.name}: title “${title}” is not a verified title (allowed: ${allowed.join(" / ")}).`);
+      if (en.dates && en.dates !== be.dates) add("block", `${en.org || en.name}: dates “${en.dates}” differ from the verified “${be.dates}”.`);
+    }
+    (en.bullets || []).forEach((b, i) => {
+      if (!b || !b.trim()) { add("warn", `${en.org || en.name}: empty bullet ${i + 1}.`); return; }
+      const fid = (en.factIds || [])[i];
+      const src = fid ? facts.get(fid) : null;
+      if (src) { const g = factGuard(b, src.f, src.e); if (!g.ok) add("block", `${en.org || en.name}, bullet ${i + 1}: ${g.problems.join("; ")}.`); }
+      else if (be) add("warn", `${en.org || en.name}, bullet ${i + 1} was typed by hand and is not tied to a verified fact — make sure it is true.`);
+      const q = bulletQuality(b); if (!q.strong) add("warn", `${en.org || en.name}, bullet ${i + 1}: weak phrasing.`);
+      if (b.length > 200) add("warn", `${en.org || en.name}, bullet ${i + 1}: ${b.length} characters — consider trimming.`);
+      if (copiedFromPosting(b, jd)) add("warn", `${en.org || en.name}, bullet ${i + 1} repeats a phrase from the posting nearly verbatim.`);
+      if (/\s{2,}/.test(b) || /\b(\w+)\s+\1\b/i.test(b)) add("warn", `${en.org || en.name}, bullet ${i + 1}: doubled word or spacing.`);
+      if (/^[a-z]/.test(b.trim())) add("warn", `${en.org || en.name}, bullet ${i + 1} starts with a lowercase letter.`);
+    });
+    for (const d of duplicateBullets(en, bank)) add("warn", `${en.org || en.name}: bullets ${d.i + 1} and ${d.j + 1} ${d.reason}.`);
+  }
+  if (!relevanceOrdering && !isChronological(doc.experience || [])) add("warn", "Experience is not in reverse-chronological order.");
+  const p = doc.profile || {};
+  if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(p.email || "")) add("warn", "Email address looks malformed.");
+  if (!/linkedin\.com\/in\/[a-z0-9-]+/i.test(p.linkedin || "")) add("warn", "LinkedIn URL is not a linkedin.com/in/ link.");
+  if (!/\d{3}[-. ]?\d{3}[-. ]?\d{4}/.test(p.phone || "")) add("warn", "Phone number looks malformed.");
+  return { issues, blocked: issues.some((i) => i.severity === "block"), warnings: issues.filter((i) => i.severity === "warn").length };
+}
+
+function applicationVerdict(result, qc) {
+  if (!result) return { verdict: "Not ready", why: "no evaluation yet" };
+  if (qc?.blocked) return { verdict: "Not ready", why: "export is blocked by an unsupported claim, altered title/dates, or overflow" };
+  const missingReq = result.items.filter((i) => i.category === "required_qualification" && i.status === "missing").length;
+  if (result.readiness >= 75 && missingReq === 0 && (qc?.warnings || 0) <= 2) return { verdict: "Ready", why: `readiness ${result.readiness}, no missing required qualifications` };
+  return { verdict: "Ready with caveats", why: `${missingReq} missing required qualification${missingReq === 1 ? "" : "s"}, readiness ${result.readiness}, ${qc?.warnings || 0} warning${(qc?.warnings || 0) === 1 ? "" : "s"}` };
+}
+
+// Questions the candidate can answer to strengthen the résumé (never auto-filled).
+function suggestedQuestions(result, bank) {
+  const qs = [];
+  for (const i of result?.missing || []) if (i.verdict === "Needs candidate confirmation") qs.push(`Have you ${(i.label || i.statement).replace(/^[A-Z]/, (c) => c.toLowerCase())}? If so: where, when, and any numbers.`);
+  for (const e of bank?.entries || []) for (const q of e.needsConfirmation || []) qs.push(`${e.org}: ${q}`);
+  return [...new Set(qs)];
+}
 
 // ── Fact guard for tailored output ──────────────────────────────────────
 // A rephrased bullet may only contain numbers and tools that its source fact
@@ -475,6 +721,6 @@ function validateNote(text, { limit = NOTE_LIMIT, name = "" } = {}) {
   return { text: t, length: t.length, ok: t.length <= limit && !BANNED_OUTREACH.test(t) && !/\[name\]/i.test(t), issues, hasValueProp: VALUE_PROP.test(t) };
 }
 
-const api = { SCORING_VERSION, WEIGHTS, CATEGORIES, CAPABILITIES, ROLE_WEIGHTS, detectRoleType, evaluate, evaluateCapability, classify, bulletQuality, rankEntries, resumeUnits, factGuard, validateNote, shortenNote, fillName, NOTE_LIMIT, BANNED_OUTREACH };
+const api = { SCORING_VERSION, WEIGHTS, CATEGORIES, CAPABILITIES, ROLE_WEIGHTS, TRACKS, TRACK_ORDER, TRACK_SKILL_PRIORITY, TRACK_CAP_WEIGHTS, classifyTrack, detectRoleType, orderForTrack, isChronological, duplicateBullets, dedupeSelection, copiedFromPosting, selectFacts, selectSkills, missingVerdict, qualityControl, applicationVerdict, suggestedQuestions, jaccard, evaluate, evaluateCapability, classify, bulletQuality, rankEntries, resumeUnits, factGuard, validateNote, shortenNote, fillName, NOTE_LIMIT, BANNED_OUTREACH };
 if (typeof module !== "undefined") module.exports = api;
 if (typeof window !== "undefined") window.Scoring = api;

@@ -1,0 +1,19 @@
+Data Science Intern — Airbnb
+San Francisco, CA
+
+You'll join the Trust data science team to build models that detect fraudulent listings and analyze host and guest behavior.
+
+Responsibilities:
+- Build and evaluate classification models for fraud detection
+- Analyze large-scale event data with SQL and Python
+- Design experiments and measure impact of trust interventions
+
+Minimum qualifications:
+- Proficiency in Python and SQL
+- Experience with Apache Spark or PySpark for large-scale data processing
+- Experience building dashboards in Tableau
+- Strong statistics foundation: regression, hypothesis testing, experimentation
+
+Preferred:
+- Experience with causal inference methods
+- Familiarity with Airflow for pipeline orchestration

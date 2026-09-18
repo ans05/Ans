@@ -114,15 +114,19 @@ test("Roblox workflow: tailor → score → edit → PDF → outreach", async ()
     const skillText = await p.locator('[data-path^="skills."][data-path$=".vals"]').allTextContents();
     assert.ok(!skillText.join(" ").includes("Figma"));
 
-    // GoalKeeper leads: Projects placed first.
-    const firstSection = await p.locator("#paper .r-sec").nth(1).textContent();
-    assert.equal(firstSection, "Projects", "Projects section should precede Experience for this PM role");
-    assert.ok(await p.locator("#projects-first").isChecked());
+    // PM track: Siemens → FlourishAI → Haas → Mercor, Projects after Experience (GoalKeeper is ranked second).
+    assert.match(await p.textContent("#track-detected"), /Product Management/);
+    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["Siemens Healthineers", "FlourishAI (Berkeley SkyDeck)", "Haas School of Business Lab", "Mercor"]);
+    assert.equal(await p.locator("#paper .r-sec").nth(1).textContent(), "Experience");
+    assert.ok(!(await p.locator("#projects-first").isChecked()));
+    // Two 30% GoalKeeper bullets can't both survive; the fixture selected abtests only, so exactly one 30% bullet.
+    assert.equal(bullets.filter((t) => /30%/.test(t)).length, 1);
 
     // 6/7: canonical score, no contradictions, not 100.
-    const score = Number((await p.textContent(".score-big")).replace(/\/100.*/, ""));
+    const score = Number((await p.locator(".score-big").first().textContent()).replace(/\/100.*/, ""));
+    const ats = Number((await p.locator(".score-big").nth(1).textContent()).replace(/\/100.*/, ""));
     const card = await p.textContent(".score-verdict");
-    const m = /(\d+) matched · (\d+) partial · (\d+) missing of (\d+) scorable items; (\d+) not scorable/.exec(card);
+    const m = /(\d+) matched · (\d+) partial · (\d+) missing of (\d+) scorable; (\d+) not scored/.exec(card);
     assert.ok(m, card);
     const [, matched, partial, missing, scorable, notScorable] = m.map(Number);
     assert.equal(matched + partial + missing, scorable);
@@ -134,16 +138,30 @@ test("Roblox workflow: tailor → score → edit → PDF → outreach", async ()
     const matchedLabels = await p.locator("ul.checks li.ok .req > span:first-child").allTextContents();
     assert.ok(!matchedLabels.some((t) => /specifications/i.test(t)), "specifications cannot be both missing and matched");
     assert.equal(await p.locator("ul.checks li.na").count(), 3, "subjective + visa + mission shown as not scored");
-    fs.writeFileSync(path.join(OUT, "roblox_score.txt"), `score=${score}\n${card}\n${(await p.locator("ul.checks li").allTextContents()).map((t) => t.replace(/\s+/g, " ").trim()).join("\n")}`);
+    assert.ok(ats < 100 && ats > 0);
+    assert.match(await p.textContent("#verdict"), /Ready with caveats|Ready|Not ready/);
+    fs.writeFileSync(path.join(OUT, "roblox_score.txt"), `readiness=${score} ats=${ats}\n${card}\n${(await p.locator("ul.checks li").allTextContents()).map((t) => t.replace(/\s+/g, " ").trim()).join("\n")}`);
 
     // 7. Editing the résumé immediately recomputes the score (no model call).
     const before = score;
     const specBullet = p.locator('[data-path="projects.0.bullets.0"]');
     await specBullet.click(); await p.keyboard.press("End"); await p.keyboard.type(" and wrote product specifications for each release");
     await p.waitForTimeout(150);
-    const after = Number((await p.textContent(".score-big")).replace(/\/100.*/, ""));
+    const after = Number((await p.locator(".score-big").first().textContent()).replace(/\/100.*/, ""));
     assert.ok(after > before, `score should rise after adding spec evidence (${before} → ${after})`);
     assert.deepEqual(await p.evaluate(() => window.__calls), ["extract", "tailor"], "no model call on edit");
+
+    // Export gating: an invented number in a fact-backed bullet blocks export; reverting unblocks it.
+    const gkBullet = p.locator('[data-path="projects.0.bullets.1"]');
+    const original = await gkBullet.textContent();
+    await gkBullet.click(); await p.keyboard.press("End"); await p.keyboard.type(" across 5,000 athletes");
+    await p.waitForTimeout(500);
+    assert.ok(await p.locator("#download").isDisabled(), "download must be disabled while an unsupported claim is present");
+    assert.match(await p.textContent("#checks"), /not verified/);
+    assert.equal(await p.textContent("#verdict"), "Not ready");
+    await gkBullet.click(); await p.keyboard.press("Control+A"); await p.keyboard.type(original);
+    await p.waitForTimeout(500);
+    assert.ok(!(await p.locator("#download").isDisabled()), "download re-enabled after reverting");
 
     // 10. PDF export: one page, extractable text, words intact.
     await p.click("#download");
@@ -190,6 +208,76 @@ test("Roblox workflow: tailor → score → edit → PDF → outreach", async ()
     await p.waitForSelector(".score-big");
     assert.deepEqual(await p.evaluate(() => window.__calls), ["extract", "tailor", "outreach", "extract"], "JD change forces re-extraction");
 
+    // Track override re-orders the page without a model call.
+    await p.click('[data-tab="job"]');
+    await p.selectOption("#track-select", "ds_ml");
+    await p.waitForTimeout(200);
+    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["FlourishAI (Berkeley SkyDeck)", "Haas School of Business Lab", "Mercor", "Siemens Healthineers"]);
+    await p.selectOption("#track-select", "");
+    // Chronological mode.
+    await p.uncheck("#relevance-order"); await p.waitForTimeout(200);
+    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["Haas School of Business Lab", "Siemens Healthineers", "FlourishAI (Berkeley SkyDeck)", "Mercor"]);
+    await p.check("#relevance-order");
+
     assert.deepEqual(errors, [], "no console/page errors");
+  } finally { await b.close(); }
+});
+
+const FIGMA = fs.readFileSync(path.join(ROOT, "jobs/figma.txt"), "utf8");
+const EXTRACT_FIGMA = { items: [
+  { statement: "Experience using SQL and a scripting language such as Python or R to clean, explore, and analyze data", category: "required_qualification", capabilities: ["sql", "python", "data_analysis"], keywords: ["SQL", "Python", "R"] },
+  { statement: "A solid foundation in statistics and quantitative reasoning, with exposure to experimentation, forecasting, statistical modeling, causal inference", category: "required_qualification", capabilities: ["statistics", "experimentation", "forecasting", "causal_inference"], keywords: ["statistics"] },
+  { statement: "The ability to structure open-ended questions, validate your analysis, and connect findings to product or business decisions", category: "required_qualification", capabilities: ["data_analysis", "product_decisions"], keywords: ["open-ended questions"] },
+  { statement: "Curiosity, initiative, and strong communication and collaboration skills", category: "subjective_trait", capabilities: [], keywords: [] },
+  { statement: "Design and evaluate experiments and develop metrics that help teams understand the impact of product changes", category: "responsibility", capabilities: ["experimentation_plans", "product_analytics"], keywords: ["experiments"] },
+  { statement: "Build and improve data pipelines and tools that make product data more scalable and accessible", category: "responsibility", capabilities: ["data_engineering"], keywords: ["data pipelines"] },
+  { statement: "Build models to understand user behavior and predict growth", category: "responsibility", capabilities: ["ml_evaluation", "forecasting"], keywords: ["models"] },
+  { statement: "Figma's platform helps teams bring ideas to life", category: "company_language", capabilities: [], keywords: [] },
+] };
+const TAILOR_FIGMA = {
+  experience: [
+    { id: "flourish", bullets: [{ factId: "flourish.etl", text: "Engineered a Python and SQL ETL pipeline to ingest, clean, and validate data from 100+ research sources" }, { factId: "flourish.pipelines", text: "Built automated data pipelines supporting 10,000+ recommendation predictions, making product data reproducible and scalable" }, { factId: "flourish.eval", text: "Benchmarked recommendations against expert-labeled references and translated error analysis into product changes that improved accuracy by 15% and engagement by 25%" }] },
+    { id: "haas", bullets: [{ factId: "haas.hypotheses", text: "Structured open-ended behavioral research questions into testable hypotheses and analyzed 1,000+ participant responses in R using regression" }, { factId: "haas.regression", text: "Fit regression models to 1,000+ participant responses in R, producing behavioral insights that shaped follow-on study design" }, { factId: "haas.coding", text: "Coded 481 open-ended participant responses into a structured codebook" }] },
+    { id: "mercor", bullets: [{ factId: "mercor.eval", text: "Evaluated 500+ LLM responses against correctness and instruction-following criteria, isolating recurring failure patterns" }, { factId: "mercor.process", text: "Redesigned the evaluation workflow for 500+ LLM responses, improving throughput by approximately 15%" }] },
+    { id: "siemens", bullets: [{ factId: "siemens.roadmap", text: "Built a prioritized 90-day activation roadmap from customer-journey and adoption-barrier research across 8+ organizations" }, { factId: "siemens.crossfn", text: "Developed data-informed patient engagement strategies with clinical, marketing, and product teams" }] },
+  ],
+  projects: [{ id: "goalkeeper", bullets: [{ factId: "gk.abtests", text: "Designed and analyzed A/B tests for an iOS app used by 100+ athletes, translating results into feature decisions that increased average session duration by 30%" }, { factId: "gk.feedback", text: "Gathered feedback from 100+ athletes and translated behavioral insights into product requirements and prioritized feature improvements" }] }],
+  skills: {},
+  omittedBecauseUnsupported: ["forecasting", "causal inference"],
+};
+
+test("Figma data-science workflow: DS track ordering, dedupe of the duplicate 30% bullet, honest missing items", async () => {
+  const b = await chromium.launch({ channel: "chromium", headless: true });
+  const p = await b.newPage({ viewport: { width: 1500, height: 950 } });
+  const errors = []; p.on("pageerror", (e) => errors.push(e.message));
+  await p.addInitScript(({ EXTRACT_FIGMA, TAILOR_FIGMA }) => {
+    const sample = async () => ({});
+    sample.json = async (prompt) => { await new Promise((r) => setTimeout(r, 20)); if (prompt.startsWith("Extract every distinct statement")) return EXTRACT_FIGMA; if (prompt.startsWith("You are tailoring")) return TAILOR_FIGMA; return {}; };
+    sample.limits = async () => ({});
+    window.claude = { use: async (n) => ({ sample, downloads: { save: async () => ({ status: "saved" }) }, permissions: { state: async () => "granted", request: async () => ({ downloads: "granted" }) } })[n] || null };
+  }, { EXTRACT_FIGMA, TAILOR_FIGMA });
+  try {
+    await p.goto("file://" + path.join(ROOT, "web/index.html")); await p.waitForTimeout(600);
+    await p.fill("#company", "Figma"); await p.fill("#jd", FIGMA);
+    assert.match(await p.textContent("#track-detected"), /Data Science/);
+    await p.click("#tailor");
+    await p.waitForFunction(() => document.querySelector(".tab.active")?.dataset.tab === "score", null, { timeout: 15000 });
+    await p.waitForTimeout(300);
+    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["FlourishAI (Berkeley SkyDeck)", "Haas School of Business Lab", "Mercor", "Siemens Healthineers"]);
+    const gkBullets = await p.locator('[data-path^="projects.0.bullets."]').allTextContents();
+    assert.equal(gkBullets.filter((t) => /30%/.test(t)).length, 1, "only one 30% bullet");
+    const skills = await p.locator('[data-path^="skills."][data-path$=".vals"]').allTextContents();
+    assert.match(skills[0], /^Python, SQL, R/);
+    const missing = await p.locator("ul.checks li.miss .req > span:first-child").allTextContents();
+    assert.ok(missing.some((t) => /Forecasting/.test(t)), `forecasting must be missing: ${missing.join(" | ")}`);
+    const partial = await p.locator("ul.checks li.part .req > span:first-child").allTextContents();
+    assert.ok(partial.some((t) => /Causal/.test(t)), `randomized A/B tests give causal inference partial credit only: ${partial.join(" | ")}`);
+    const verdicts = await p.locator("ul.checks li.miss .ev").allTextContents();
+    assert.ok(verdicts.some((t) => /Needs candidate confirmation/.test(t)), verdicts.join(" | "));
+    assert.match(await p.textContent("#verdict"), /Ready/);
+    const readiness = Number((await p.locator(".score-big").first().textContent()).replace(/\/100.*/, ""));
+    assert.ok(readiness < 100 && readiness > 40, `readiness ${readiness}`);
+    fs.writeFileSync(path.join(OUT, "figma_score.txt"), `readiness=${readiness}\n${await p.textContent(".score-verdict")}\n${(await p.locator("ul.checks li").allTextContents()).map((t) => t.replace(/\s+/g, " ").trim()).join("\n")}`);
+    assert.deepEqual(errors, []);
   } finally { await b.close(); }
 });

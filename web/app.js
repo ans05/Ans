@@ -9,6 +9,8 @@ const els = {
   reset: $("reset-resume"), settingsStatus: $("settings-status"),
   rate: $("rate"), improve: $("improve"), scoreStatus: $("score-status"), scoreOut: $("score-out"),
   outreach: $("outreach"), outreachStatus: $("outreach-status"), outreachOut: $("outreach-out"),
+  trackDetected: $("track-detected"), trackSelect: $("track-select"), relevanceOrder: $("relevance-order"),
+  checks: $("checks"), verdict: $("verdict"),
 };
 const S = window.Scoring;
 const BANK = EVIDENCE_BANK;
@@ -19,7 +21,11 @@ let state = {
   reqs: null,          // { key, items: [{statement, category, capabilities, keywords}] }
   result: null,        // canonical evaluation from Scoring.evaluate
   targets: null, names: {},
+  trackOverride: "",   // "" = use the detected track
+  relevanceOrdering: true,
+  pdfInfo: null, qc: null,
 };
+const effectiveTrack = () => state.trackOverride || S.classifyTrack(els.jd.value).track;
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const skillsToArray = (obj) => Array.isArray(obj) ? obj : Object.entries(obj).map(([cat, vals]) => ({ cat, vals }));
@@ -57,7 +63,10 @@ function load() {
     state.reqs = last.reqs && last.reqs.key === cacheKey(els.jd.value) ? last.reqs : null; // stale extraction is discarded
     state.targets = last.targets || null;
     state.names = last.names || {};
+    state.trackOverride = last.trackOverride || "";
+    state.relevanceOrdering = last.relevanceOrdering !== false;
   }
+  els.trackSelect.value = state.trackOverride; els.relevanceOrder.checked = state.relevanceOrdering; renderTrack();
   if (!state.doc) state.doc = baseDoc();
   if (!state.doc.sectionOrder) state.doc.sectionOrder = ["experience", "projects"];
   renderEditor(); refreshPdf(); rescore();
@@ -69,7 +78,7 @@ let saveTimer = null;
 function persist() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    store.set("lastResult", { company: els.company.value.trim(), jd: els.jd.value, doc: state.doc, claudeVersion: state.claudeVersion, reqs: state.reqs, targets: state.targets, names: state.names });
+    store.set("lastResult", { company: els.company.value.trim(), jd: els.jd.value, doc: state.doc, claudeVersion: state.claudeVersion, reqs: state.reqs, targets: state.targets, names: state.names, trackOverride: state.trackOverride, relevanceOrdering: state.relevanceOrdering });
     els.saved.textContent = "Saved";
     setTimeout(() => { if (els.saved.textContent === "Saved") els.saved.textContent = ""; }, 1500);
   }, 300);
@@ -131,7 +140,9 @@ function bankForPrompt() {
 }
 
 function tailorPrompt(jd, ranked) {
+  const track = effectiveTrack();
   const priority = ranked.slice(0, 3).map((r) => `${r.name} (${r.hits.join(", ") || "general"})`).join("; ");
+  const trackLine = `Role track: ${S.TRACKS[track].label}. Entry order for this track: ${S.TRACK_ORDER[track].join(" → ")}. Skills to lead with (only if verified): ${(S.TRACK_SKILL_PRIORITY[track] || []).join(", ")}.`;
   return `You are tailoring a one-page early-career résumé to a job description. You may only SELECT, SHORTEN, REORDER, and lightly REPHRASE the verified facts below. You may not add any title, employer, date, tool, metric, audience size, stakeholder, experiment, deliverable, or result that is not in the fact you selected. If the job asks for something no fact supports, leave it out — do not fill the gap.
 
 Verified evidence bank (each fact has an id):
@@ -143,6 +154,7 @@ ${JSON.stringify(BANK.skills)}
 Job description:
 ${jd.slice(0, 12000)}
 
+${trackLine}
 Evidence ranking for this role (computed from the posting; strongest first): ${priority}
 
 Reply with only JSON:
@@ -154,9 +166,9 @@ Reply with only JSON:
 }
 
 Rules:
-- Include every entry. Give the strongest entries for this role 3-4 bullets and the weakest 2. Pick each entry's bullets by relevance to the posting, not by their original order.
-- Prefer facts whose tags match what the posting asks for. Avoid selecting two facts that say nearly the same thing (e.g. several LLM-evaluation facts).
-- Rephrasing: natural résumé language, past tense, no label prefixes like "Keyword:", no copying the posting's sentences, no keyword stuffing, no exaggeration of scale or seniority. Keep every metric exactly as in the fact.
+- Include every entry. Give the strongest entries for this track 3-4 bullets and the weakest 2. Pick each entry's bullets by relevance to the posting, not by their original order.
+- Prefer facts whose tags match what the posting asks for. Never select two facts that center on the same result (e.g. two GoalKeeper bullets about the 30% session-duration gain, or several LLM-evaluation facts).
+- Each bullet: strong action verb → what was done and how → verified scale or result when available → the decision, product, or business impact. Under ~180 characters. Natural résumé language, past tense, no label prefixes, no sentences lifted from the posting, no keyword stuffing, no exaggeration of scale or seniority. Use the posting's terminology only where it truthfully describes the fact. Keep every metric exactly as in the fact.
 - Skills: lead each category with the items most relevant to this posting; do not add items that are not in the allowed list.`;
 }
 const validTailored = (t) => Array.isArray(t?.experience) && Array.isArray(t?.projects) && t?.skills && typeof t.skills === "object";
@@ -180,34 +192,49 @@ function docFromSelection(sel) {
         if (!g.ok) { guardNotes.push(`${e.org}: ${g.problems.join("; ")} — used the verified fact text instead`); text = src.fact.text; }
         bullets.push({ factId: b.factId, text });
       }
-      if (!bullets.length) bullets = e.facts.slice(0, 2).map((f) => ({ factId: f.id, text: f.text }));
+      // Semantic dedupe, per-rank bullet caps, and deterministic fill from the bank when the model under-selects.
+      const track = effectiveTrack();
+      const rank = Math.max(0, (S.TRACK_ORDER[track] || []).indexOf(e.id));
+      const cap = kind === "experience" ? [4, 3, 3, 2, 2][Math.min(rank, 4)] : 3;
+      const caps = scoredCapabilityIds();
+      let entry = { org: e.org, bullets: bullets.map((b) => b.text), factIds: bullets.map((b) => b.factId) };
+      const dd = S.dedupeSelection(entry, BANK);
+      if (dd.dropped.length) guardNotes.push(`${e.org}: dropped ${dd.dropped.length} duplicate bullet${dd.dropped.length > 1 ? "s" : ""} (${dd.dropped.map((d) => d.reason).join("; ")})`);
+      entry = dd.entry;
+      if (entry.bullets.length < 2) {
+        for (const f of S.selectFacts(e, caps, track, 3)) { if (entry.bullets.length >= 2) break; if (!entry.factIds.includes(f.id) && !entry.bullets.some((b) => S.jaccard(b, f.text) >= 0.6)) { entry.bullets.push(f.text); entry.factIds.push(f.id); } }
+      }
+      entry.bullets = entry.bullets.slice(0, cap); entry.factIds = entry.factIds.slice(0, cap);
+      bullets = entry.bullets.map((t, i) => ({ text: t, factId: entry.factIds[i] }));
       const base = { id: e.id, dates: e.dates, bullets: bullets.map((b) => b.text), factIds: bullets.map((b) => b.factId) };
       return kind === "experience"
         ? { ...base, org: e.org, role: e.role, location: e.location }
         : { ...base, name: e.org, tech: `${e.role} | ${e.tech}` };
     });
   };
-  // Skills: only items that appear in the bank's allowed skills text.
-  const allowed = Object.values(BANK.skills).join(", ").split(/,\s*/).map((s) => s.trim().toLowerCase()).filter(Boolean);
-  const skills = Object.entries(sel.skills || BANK.skills).map(([cat, vals]) => {
-    const items = String(vals).split(/,\s*/).map((s) => s.trim()).filter((s) => s && allowed.some((a) => a === s.toLowerCase() || a.startsWith(s.toLowerCase() + " (")));
-    return { cat, vals: items.join(", ") };
-  }).filter((s) => s.vals);
-  return { doc: { profile: clone(BANK.profile), education: clone(state.base.education), experience: build("experience"), projects: build("project"), skills: skills.length ? skills : skillsToArray(BANK.skills), sectionOrder: ["experience", "projects"] }, guardNotes };
+  // Skills: verified skills only, ordered for the track and the posting; anything the posting names that the bank cannot back is reported.
+  const sk = S.selectSkills(BANK, effectiveTrack(), els.jd.value);
+  if (sk.unsupported.length) guardNotes.push(`posting names ${sk.unsupported.join(", ")} — not verified, not listed`);
+  const doc = { profile: clone(BANK.profile), education: clone(state.base.education), experience: build("experience"), projects: build("project"), skills: sk.skills.length ? sk.skills : skillsToArray(BANK.skills), sectionOrder: ["experience", "projects"] };
+  return { doc, guardNotes };
 }
 
 // Deterministic emphasis: order entries by evidence for this posting; put Projects first when a project is the strongest evidence.
 function applyRanking(doc) {
-  const caps = scoredCapabilityIds();
-  if (!caps.length) return false;
-  const ranked = S.rankEntries(doc, caps, S.detectRoleType(els.jd.value));
-  const order = (kind) => ranked.filter((r) => r.kind === kind).map((r) => r.id);
   const before = JSON.stringify([doc.experience.map((e) => e.id), doc.sectionOrder]);
-  doc.experience.sort((a, b) => order("experience").indexOf(a.id) - order("experience").indexOf(b.id));
-  doc.projects.sort((a, b) => order("project").indexOf(a.id) - order("project").indexOf(b.id));
-  const top = ranked[0];
-  doc.sectionOrder = top && top.kind === "project" && top.score > (ranked.find((r) => r.kind === "experience")?.score || 0) ? ["projects", "experience"] : ["experience", "projects"];
+  if (state.relevanceOrdering) {
+    const o = S.orderForTrack(doc, effectiveTrack());
+    doc.experience = o.experience; doc.projects = o.projects; doc.sectionOrder = o.sectionOrder;
+  } else {
+    const end = (e) => { const m = /(\w{3})\w*\.?\s+(\d{4})\s*$/.exec(e.dates || ""); const mo = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 }; return /present/i.test(e.dates || "") ? 999912 : m ? Number(m[2]) * 100 + (mo[m[1].toLowerCase()] || 0) : 0; };
+    doc.experience.sort((a, b) => end(b) - end(a)); doc.sectionOrder = ["experience", "projects"];
+  }
   return JSON.stringify([doc.experience.map((e) => e.id), doc.sectionOrder]) !== before;
+}
+function renderTrack() {
+  const c = S.classifyTrack(els.jd.value);
+  const eff = effectiveTrack();
+  els.trackDetected.textContent = els.jd.value.trim().length < 40 ? "—" : `${c.label} (${c.confidence} confidence)${state.trackOverride ? ` · using ${S.TRACKS[eff].label}` : ""}`;
 }
 function scoredCapabilityIds() {
   return [...new Set((state.reqs?.items || []).filter((i) => ["required_qualification", "preferred_qualification", "responsibility"].includes(S.classify(i))).flatMap((i) => i.capabilities || []))];
@@ -218,7 +245,7 @@ els.tailor.addEventListener("click", async () => {
   if (jd.length < 80) { setStatus("Paste the full job description first.", "error"); return; }
   const reqs = await ensureRequirements(jd);
   if (!reqs) return;
-  const ranked = S.rankEntries(state.base, scoredCapabilityIds(), S.detectRoleType(jd));
+  const ranked = S.rankEntries(state.base, scoredCapabilityIds(), effectiveTrack());
   const sel = await ask(tailorPrompt(jd, ranked), { btn: els.tailor, statusEl: els.status, busyMsg: "Tailoring from your verified evidence bank — usually 15–40 seconds…", validate: validTailored });
   if (!sel) return;
   const { doc, guardNotes } = docFromSelection(sel);
@@ -228,7 +255,7 @@ els.tailor.addEventListener("click", async () => {
   renderEditor(); refreshPdf(); rescore(); persist();
   const omitted = (sel.omittedBecauseUnsupported || []).filter(Boolean);
   const r = state.result;
-  toast(`Tailored. Evidence Match Score ${r ? r.score : "—"}/100.${guardNotes.length ? ` Fact guard replaced ${guardNotes.length} unverifiable rewrite${guardNotes.length > 1 ? "s" : ""}.` : ""}${omitted.length ? ` Left out (no evidence): ${omitted.slice(0, 3).join("; ")}.` : ""}`, "ok");
+  toast(`Tailored for ${S.TRACKS[effectiveTrack()].label}. Readiness ${r ? r.readiness : "—"}/100, ATS coverage ${r ? r.ats : "—"}/100.${guardNotes.length ? ` Fact guard replaced ${guardNotes.length} unverifiable rewrite${guardNotes.length > 1 ? "s" : ""}.` : ""}${omitted.length ? ` Left out (no evidence): ${omitted.slice(0, 3).join("; ")}.` : ""}`, "ok");
   setStatus("Done. Edit anything in the middle; the PDF and score update as you type.");
   showTab("score");
 });
@@ -274,10 +301,28 @@ async function ensureRequirements(jd) {
 }
 
 // Recomputed from the current document on every edit; no model call.
+function runChecks() {
+  state.qc = S.qualityControl(currentResume(), { jd: els.jd.value, bank: BANK, pdf: state.pdfInfo, relevanceOrdering: state.relevanceOrdering });
+  renderChecks();
+  return state.qc;
+}
 function rescore() {
+  const qc = runChecks();
   if (!state.reqs?.items || !state.doc) { state.result = null; renderScore(); return; }
-  state.result = S.evaluate(state.reqs.items, currentResume(), { roleType: S.detectRoleType(els.jd.value) });
+  const unsupported = qc.issues.filter((i) => i.severity === "block" && /not verified|prohibited/.test(i.message)).length;
+  state.result = S.evaluate(state.reqs.items, currentResume(), { track: effectiveTrack(), jd: els.jd.value, bank: BANK, relevanceOrdering: state.relevanceOrdering, unsupportedClaims: unsupported });
+  renderChecks();   // verdict badge depends on the fresh result
   renderScore();
+}
+function renderChecks() {
+  const qc = state.qc; if (!qc) return;
+  const v = S.applicationVerdict(state.result, qc);
+  els.verdict.textContent = v.verdict; els.verdict.title = v.why;
+  els.verdict.className = `verdict ${v.verdict === "Ready" ? "ok" : v.verdict === "Not ready" ? "bad" : "mid"}`;
+  els.download.disabled = qc.blocked;
+  els.download.title = qc.blocked ? "Export blocked — fix the issues in Checks" : "";
+  if (!qc.issues.length) { els.checks.innerHTML = `<span class="hint">All checks pass.</span>`; return; }
+  els.checks.innerHTML = `<details ${qc.blocked ? "open" : ""}><summary>${qc.blocked ? `<b class="bad">Export blocked</b> — ` : ""}${qc.issues.filter((i) => i.severity === "block").length} blocking, ${qc.warnings} warning${qc.warnings === 1 ? "" : "s"}</summary><ul class="checklist">${qc.issues.map((i) => `<li class="${i.severity}">${esc(i.message)}</li>`).join("")}</ul></details>`;
 }
 
 els.rate.addEventListener("click", async () => {
@@ -334,10 +379,10 @@ function weakestIndex(entry) {
 function renderScore() {
   const r = state.result;
   if (!r) { els.scoreOut.innerHTML = state.reqs ? "" : `<p class="hint">Click <b>Rate match</b> to read the posting and score the current résumé.</p>`; els.improve.hidden = true; return; }
-  const tone = r.score >= 80 ? "good" : r.score >= 60 ? "mid" : "low";
+  const tone = r.readiness >= 75 ? "good" : r.readiness >= 55 ? "mid" : "low";
   const C = r.components;
   const compRows = Object.entries(C).filter(([, c]) => c.weight > 0).map(([k, c]) => `
-    <div class="formula-row"><span>${{ required: "Required qualifications", preferred: "Preferred qualifications", responsibility: "Responsibilities / capabilities", quality: "Bullet quality", ordering: "Evidence ordering" }[k]}<span class="ev">${esc(c.label)}</span></span><span>${c.weight.toFixed(0)} × ${c.value.toFixed(2)}</span><b>${c.points.toFixed(1)}</b></div>`).join("");
+    <div class="formula-row"><span>${{ required: "Required qualifications (+ responsibilities at ½)", preferred: "Preferred qualifications", strength: "Evidence strength & specificity", relevance: "Role relevance & ordering", clarity: "Clarity, concision, no duplication" }[k]}<span class="ev">${esc(c.label)}</span></span><span>${c.weight.toFixed(0)} × ${c.value.toFixed(2)}</span><b>${c.points.toFixed(1)}</b></div>`).join("");
 
   const statusMark = { matched: "✓", partially_matched: "◐", missing: "✗", not_scorable: "—" };
   const li = (i) => `
@@ -346,29 +391,36 @@ function renderScore() {
       <span class="req">
         <span>${esc(i.label || i.statement)}${i.label && i.label !== i.statement ? ` <span class="ev">— from “${esc(i.statement)}”</span>` : ""}</span>
         ${i.status === "not_scorable" ? `<span class="ev">${esc(i.reason)}</span>` : i.status === "missing"
-          ? `<span class="ev">${esc(i.reason)}.${i.evidence ? ` Closest: ${esc(i.evidence)}.` : ""}</span>`
-          : `<span class="ev"><b>${i.status === "matched" ? "Evidence" : "Partial evidence"}</b> (${esc(i.evidenceType)}, ${esc(i.confidence)} confidence): “${esc(i.evidence)}” — ${esc(i.where)}. ${esc(i.reason)}.</span>`}
+          ? `<span class="ev"><b>${esc(i.verdict || "Missing")}</b> — ${esc(i.why || i.reason)}.${i.evidence ? ` Closest: ${esc(i.evidence)}.` : ""}</span>`
+          : `<span class="ev"><b>${i.status === "matched" ? (i.evidenceType === "direct" ? "Direct match" : "Equivalent match") : "Partial match"}</b> (${esc(i.confidence)} confidence): “${esc(i.evidence)}” — ${esc(i.where)}. ${esc(i.reason)}.</span>`}
       </span>
     </li>`;
   const group = (title, arr) => arr.length ? `<div class="sub-label">${title} (${arr.length})</div><ul class="checks">${arr.map(li).join("")}</ul>` : "";
   const byCat = (cat) => r.items.filter((i) => i.category === cat);
 
   const missingList = r.missing.length ? `
-    <div class="sub-label">Missing — needs your confirmation (${r.missing.length})</div>
-    <ul class="checks">${r.missing.map((i) => `<li class="miss"><span class="mark">?</span><span class="req"><span>${esc(i.label || i.statement)}</span><span class="ev">Nothing in your verified evidence bank demonstrates this. If you have done it, tell Claude the specific facts (what, where, when, any numbers) so it can be added to the bank — the tool will not fill this gap on its own.</span></span></li>`).join("")}</ul>` : "";
+    <div class="sub-label">Missing qualifications (${r.missing.length})</div>
+    <ul class="checks">${r.missing.map((i) => `<li class="miss"><span class="mark">${i.verdict?.startsWith("Not") ? "✗" : "?"}</span><span class="req"><span>${esc(i.label || i.statement)}</span><span class="ev"><b>${esc(i.verdict || "Missing")}</b> — ${esc(i.why || "")}</span></span></li>`).join("")}</ul>` : "";
+  const questions = S.suggestedQuestions(r, BANK);
+  const qList = questions.length ? `<div class="sub-label">Questions you can answer to strengthen this résumé (${questions.length})</div><ol class="sugg">${questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>` : "";
+  const v = S.applicationVerdict(r, state.qc);
 
   els.scoreOut.innerHTML = `
-    <div class="score-card"><div class="score-big ${tone}">${r.score}<span class="score-of">/100</span></div>
-      <div class="score-verdict"><b>Evidence Match Score</b> — ${r.counts.matched} matched · ${r.counts.partially_matched} partial · ${r.counts.missing} missing of ${r.counts.scorable} scorable items; ${r.counts.not_scorable} not scorable. Internal evidence-coverage estimate, not a prediction of an employer's ATS or interview decision. Recomputed on every edit.</div></div>
-    <div class="formula">${compRows}<div class="formula-row total"><span>Score</span><span></span><b>${r.score}</b></div></div>
+    <div class="score-card">
+      <div><div class="score-big ${tone}">${r.readiness}<span class="score-of">/100</span></div><div class="score-sub">Recruiter readiness</div></div>
+      <div><div class="score-big ${r.ats >= 75 ? "good" : r.ats >= 55 ? "mid" : "low"}">${r.ats}<span class="score-of">/100</span></div><div class="score-sub">ATS coverage</div></div>
+      <div class="score-verdict"><b>${esc(v.verdict)}</b> — ${esc(v.why)}.<br>Track: ${esc(r.trackLabel)}. ${r.counts.matched} matched · ${r.counts.partially_matched} partial · ${r.counts.missing} missing of ${r.counts.scorable} scorable; ${r.counts.not_scorable} not scored. Internal estimates, not an employer's decision. Recomputed on every edit.</div></div>
+    <div class="formula">${compRows}<div class="formula-row total"><span>Recruiter readiness</span><span></span><b>${r.readiness}</b></div></div>
     ${group("Required qualifications", byCat("required_qualification"))}
     ${group("Preferred qualifications", byCat("preferred_qualification"))}
     ${group("Responsibilities and capabilities", byCat("responsibility"))}
     ${missingList}
+    ${qList}
+    ${r.duplicates.length ? `<div class="sub-label">Duplicate accomplishments (${r.duplicates.length})</div><ul class="checks">${r.duplicates.map((d) => `<li class="miss"><span class="mark">≈</span><span class="req"><span>${esc(d.entry)}</span><span class="ev">${esc(d.reason)}: “${esc(d.a)}” / “${esc(d.b)}”</span></span></li>`).join("")}</ul>` : ""}
     ${r.notScorable.length ? `<div class="sub-label">Not scored (${r.notScorable.length})</div><ul class="checks">${r.notScorable.map(li).join("")}</ul>` : ""}
     <div class="sub-label">Bullet quality (${r.bullets.filter((b) => b.pass).length}/${r.bullets.length} pass)</div>
     ${r.bullets.some((b) => !b.pass) ? `<ul class="checks">${r.bullets.filter((b) => !b.pass).map((b) => `<li class="miss"><span class="mark">✗</span><span class="req"><span>${esc(b.where)}</span><span class="ev">${esc(b.notes.join(" · "))}</span></span></li>`).join("")}</ul>` : `<div class="hint">Every bullet opens with a strong verb and carries either a metric or a concrete scope with an outcome.</div>`}
-    <div class="sub-label">Evidence ordering</div><div class="hint">${esc(C.ordering.label)}${C.ordering.value < 1 ? ` <button class="btn tiny" type="button" id="apply-order">Reorder by evidence</button>` : ""}</div>`;
+    <div class="sub-label">Ordering</div><div class="hint">${esc(C.relevance.label)}${C.relevance.value < 1 ? ` <button class="btn tiny" type="button" id="apply-order">${state.relevanceOrdering ? "Apply track order" : "Sort chronologically"}</button>` : ""}</div>`;
   const bankable = [...r.missing, ...r.partial].some((i) => i.capability && bankFactsFor(i.capability).some((c) => !onPage(c.fact.id)));
   els.improve.hidden = !bankable;
   document.getElementById("apply-order")?.addEventListener("click", () => { applyRanking(state.doc); renderEditor(); refreshPdf(); rescore(); persist(); });
@@ -575,12 +627,14 @@ function buildPdf() { return renderResumePDF(currentResume()); }
 function refreshPdf() {
   if (!state.doc) return;
   if (!window.jspdf) { els.fit.textContent = "PDF engine failed to load — reload the page"; els.fit.className = "fit warn"; return; }
-  const { doc, overflow, scale } = buildPdf();
+  const { doc, overflow, scale, clipped, pages } = buildPdf();
+  state.pdfInfo = { overflow, pages, clipped: clipped || [] };
   if (state.pdfUrl) URL.revokeObjectURL(state.pdfUrl);
   state.pdfUrl = URL.createObjectURL(doc.output("blob"));
   els.pdf.src = `${state.pdfUrl}#navpanes=0&view=FitH`;
   if (overflow) { els.fit.textContent = "Runs past one page — trim a bullet"; els.fit.className = "fit warn"; }
   else { els.fit.textContent = scale < 1 ? `Fits on one page · type at ${Math.round(scale * 100)}%` : "Fits on one page"; els.fit.className = "fit ok"; }
+  runChecks();
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────
@@ -604,9 +658,12 @@ els.useBase.addEventListener("click", () => { state.doc = baseDoc(); state.claud
 els.revert.addEventListener("click", () => { if (!state.claudeVersion) return; state.doc = clone(state.claudeVersion); renderEditor(); refreshPdf(); rescore(); persist(); setStatus("Reverted to Claude's version."); });
 
 els.download.addEventListener("click", async () => {
+  const qc = runChecks();
+  if (qc.blocked) { toast(`Export blocked: ${qc.issues.filter((i) => i.severity === "block").map((i) => i.message).join(" ")}`, "error"); return; }
   els.download.disabled = true;
   try {
     const { doc, overflow, scale } = buildPdf();
+    const warnNote = qc.warnings ? ` ${qc.warnings} warning${qc.warnings === 1 ? "" : "s"} noted in Checks.` : "";
     const company = (els.company.value.trim() || "Resume").replace(/[^A-Za-z0-9_-]+/g, "_");
     const filename = `${state.doc.profile.name.replace(/\s+/g, "_")}_${company}.pdf`;
     const fitNote = overflow ? " Note: it still runs past one page — trim a bullet or two." : "";
@@ -619,12 +676,12 @@ els.download.addEventListener("click", async () => {
     if (!state.downloads || pstate === "unavailable") { toast(`Saving isn't available in this view (downloads: ${pstate}). Open the page from claude.ai in a desktop browser.`, "error"); return; }
     toast("Preparing the PDF — confirm the save when claude.ai asks…", "busy");
     const res = await state.downloads.save({ filename, data: doc.output("blob") });
-    toast(res?.status === "delivered" ? `Delivered ${filename}.` : `Saved ${filename}.${fitNote}`, "ok");
+    toast(res?.status === "delivered" ? `Delivered ${filename}.${warnNote}` : `Saved ${filename}.${fitNote}${warnNote}`, "ok");
   } catch (e) {
     const code = e?.code || (e?.message ? `error: ${e.message}` : "unknown");
     const copy = { declined: "Download cancelled — click Download PDF again and choose Save when claude.ai asks.", rate_limited: "A save prompt is already open — finish that one first.", too_large: "The PDF was rejected as too large — remove a bullet and try again.", not_granted: "File saving hasn't been allowed for this page — reload and choose Allow when asked.", unavailable: "Saving isn't available in this view — open the page from claude.ai in a desktop browser." }[code];
     toast(copy || `Couldn't save the PDF (${code}). Tell Claude this code and it can fix it.`, "error");
-  } finally { els.download.disabled = false; }
+  } finally { els.download.disabled = !!state.qc?.blocked; }
 });
 
 let toastTimer = null;
@@ -637,7 +694,9 @@ function toast(msg, kind = "") {
 }
 
 els.company.addEventListener("input", persist);
-els.jd.addEventListener("input", () => { if (state.reqs && state.reqs.key !== cacheKey(els.jd.value)) { state.reqs = null; state.result = null; renderScore(); } persist(); });
+els.jd.addEventListener("input", () => { if (state.reqs && state.reqs.key !== cacheKey(els.jd.value)) { state.reqs = null; state.result = null; renderScore(); } renderTrack(); persist(); });
+els.trackSelect.addEventListener("change", () => { state.trackOverride = els.trackSelect.value; renderTrack(); if (state.doc) { applyRanking(state.doc); renderEditor(); refreshPdf(); } rescore(); persist(); });
+els.relevanceOrder.addEventListener("change", () => { state.relevanceOrdering = els.relevanceOrder.checked; if (state.doc) { applyRanking(state.doc); renderEditor(); refreshPdf(); } rescore(); persist(); });
 els.jd.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") els.tailor.click(); });
 
 // ── Base résumé settings ─────────────────────────────────────────────────

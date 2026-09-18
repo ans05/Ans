@@ -40,6 +40,7 @@ function drawResume(data, scale) {
   const f = (pt) => pt * scale;
   const LH = (pt) => pt * scale * 1.24;
   let y = TM;
+  const clipped = [];
 
   const font = (style, size) => { doc.setFont(family, style); doc.setFontSize(f(size)); };
   const width = (s) => doc.getTextWidth(s);
@@ -144,7 +145,9 @@ function drawResume(data, scale) {
       font("normal", 9.2); const dw = width(pr.dates);
       font("italic", 9.5);
       const techMax = W - nameW - dw - f(16);
-      const tech = doc.splitTextToSize(`| ${pr.tech}`, techMax)[0];
+      const techLines = doc.splitTextToSize(`| ${pr.tech}`, techMax);
+      const tech = techLines[0];
+      if (techLines.length > 1) clipped.push(`${pr.name} tech line shortened to fit`);
       doc.text(tech, LM + nameW + f(4), y);
       textRight(y, pr.dates, 9.2);
       y += f(1.5);
@@ -164,7 +167,7 @@ function drawResume(data, scale) {
   const skills = Array.isArray(data.skills) ? data.skills.map((s) => [s.cat, s.vals]) : Object.entries(data.skills || {});
   for (const [cat, vals] of skills) para(vals, 9.6, "normal", `${cat}:`);
 
-  return { doc, overflow: y > PH - BM, scale, pages: doc.getNumberOfPages() };
+  return { doc, overflow: y > PH - BM, scale, pages: doc.getNumberOfPages(), clipped };
 }
 
 if (typeof module !== "undefined") module.exports = { renderResumePDF, drawResume };

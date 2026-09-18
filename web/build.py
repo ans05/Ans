@@ -98,6 +98,17 @@ ul.checks li.part .mark { color: var(--mid); }
 ul.checks li.na .mark { color: var(--muted); }
 .formula-row .ev { display: block; font-weight: 400; color: var(--muted); font-size: 11.5px; }
 .counter.over { color: var(--danger); font-weight: 700; }
+select { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; color: var(--ink); background: var(--bg); }
+.verdict { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); }
+.verdict.ok { color: var(--good); } .verdict.mid { color: var(--mid); } .verdict.bad { color: var(--low); }
+.checks-panel { font-size: 12.5px; }
+.checks-panel summary { cursor: pointer; color: var(--muted); }
+.checks-panel .bad { color: var(--danger); }
+ul.checklist { margin: 6px 0 0; padding-left: 18px; }
+ul.checklist li.block { color: var(--danger); }
+ul.checklist li.warn { color: var(--muted); }
+.score-card { flex-wrap: wrap; gap: 18px; }
+.score-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
 label.inline { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .target .field { margin: 2px 0; }
 .target input[type="text"] { padding: 5px 8px; font-size: 13px; }
@@ -128,6 +139,7 @@ html = f"""<title>Resume Tailor</title>
   <div class="brand"><span class="brand-mark">RT</span><span class="brand-name">Resume Tailor</span></div>
   <div id="toast" class="toast" hidden></div>
   <div class="topbar-right">
+    <span id="verdict" class="verdict" title=""></span>
     <span id="fit" class="fit"></span>
     <button id="stop" class="btn ghost" type="button" hidden>Stop</button>
     <button id="revert" class="btn ghost" type="button" hidden>Revert to Claude's version</button>
@@ -156,6 +168,18 @@ html = f"""<title>Resume Tailor</title>
         <span class="label">Job description</span>
         <textarea id="jd" placeholder="Paste the full job posting here."></textarea>
       </label>
+      <div class="field">
+        <span class="label">Role track <span class="hint">detected: <span id="track-detected">—</span></span></span>
+        <select id="track-select">
+          <option value="">Use detected track</option>
+          <option value="ds_ml">Data Science / ML</option>
+          <option value="product_analytics">Product Analytics / BI</option>
+          <option value="product_management">Product Management</option>
+          <option value="ai_product">AI Product / Technical PM</option>
+          <option value="product_strategy">Product Strategy / Growth</option>
+        </select>
+        <label class="inline hint"><input type="checkbox" id="relevance-order" checked> Order experience by relevance to the track (off = reverse-chronological)</label>
+      </div>
       <div class="actions">
         <button id="tailor" class="btn primary" type="button">Tailor with Claude</button>
         <button id="use-base" class="btn ghost" type="button">Start from base</button>
@@ -164,7 +188,7 @@ html = f"""<title>Resume Tailor</title>
     </div>
 
     <div class="tabpane" id="tab-score" hidden>
-      <p class="hint lead"><b>Evidence Match Score</b> — an internal estimate of how much of the posting your verified résumé evidence covers: 50% required qualifications, 10% preferred, 20% responsibilities, 10% bullet quality, 10% evidence ordering. Matched = 1, partial = 0.5, missing = 0; subjective, logistics and company language are shown but never scored. Not a prediction of an employer's ATS or interview decision.</p>
+      <p class="hint lead"><b>Recruiter readiness</b> = 40% required qualifications (responsibilities at half weight) + 20% preferred + 20% evidence strength &amp; specificity + 10% role relevance &amp; ordering + 10% clarity, concision and no duplication. <b>ATS coverage</b> = matched + ½ partial over scorable items. Matched 1 · partial 0.5 · missing 0; company language, eligibility and traits are shown but never scored. Weak equivalences, duplicates, copied phrasing and unsupported claims are penalised. Internal estimates, not an employer's decision.</p>
       <div class="actions">
         <button id="rate" class="btn primary" type="button">Rate match</button>
         <button id="improve" class="btn ghost" type="button" hidden>Add verified facts from bank</button>
@@ -190,6 +214,7 @@ html = f"""<title>Resume Tailor</title>
       <span class="label">Edit <span class="hint">— click any text to change it · Enter adds a bullet · Backspace on an empty bullet removes it</span></span>
       <span class="hint"><label class="inline"><input type="checkbox" id="projects-first"> Projects first</label> <span id="saved"></span></span>
     </div>
+    <div id="checks" class="checks-panel"><span class="hint">Checks run before every export.</span></div>
     <div id="paper" class="paper"></div>
   </section>
 
