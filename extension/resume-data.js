@@ -24,9 +24,9 @@ const DEFAULT_RESUME = {
       bullets: [
         "Product roadmap: built a prioritized 90-day activation strategy for the theranostics business from customer-journey, workflow, and adoption-barrier research across 8+ organizations",
         "Competitive analysis: mapped patient advocacy networks and competitive positioning across 8+ organizations to identify strategic growth opportunities for theranostics",
-        "Market research: synthesized adoption-barrier and workflow findings into partnership priorities across multiple product lines, presented to product and strategy leadership",
+        "Market research: synthesized adoption-barrier and workflow findings into partnership priorities across multiple product lines for a consulting deliverable to Siemens Healthineers",
         "Stakeholder alignment: developed data-informed patient engagement strategies with clinical, marketing, and product teams to improve treatment access and navigation",
-        "Customer journey mapping: documented patient and provider journeys across 8+ organizations to locate friction points blocking theranostics adoption",
+        "Customer journey mapping: documented patient journeys across 8+ organizations to locate friction points blocking theranostics adoption",
       ],
     },
     {
@@ -37,8 +37,8 @@ const DEFAULT_RESUME = {
       bullets: [
         "Model evaluation: scored 500+ AI-generated responses against structured quality metrics to identify recurring failure patterns and improve model performance",
         "Training data: contributed high-signal examples to a 15,000+ response dataset used to refine model behavior and evaluation quality",
-        "Process optimization: improved evaluation workflow throughput by 15% through performance analysis and process redesign",
-        "Quality rubrics: applied structured, multi-criteria scoring rubrics to LLM outputs so evaluations were consistent across reviewers",
+        "Process optimization: streamlined the response-evaluation workflow through performance analysis and process redesign",
+        "Quality rubrics: applied structured, multi-criteria scoring rubrics to 500+ LLM outputs to grade accuracy, helpfulness, and safety",
         "Error analysis: categorized recurring failure modes across 500+ responses and turned them into concrete guidance for model refinement",
       ],
     },
@@ -49,9 +49,9 @@ const DEFAULT_RESUME = {
       dates: "Feb 2025 – Aug 2026",
       bullets: [
         "Hypothesis testing: structured open-ended behavioral research questions into testable hypotheses and analyzed 1,000+ participant responses in R using regression",
-        "Experimental design: designed behavioral research studies on leadership, consumer decision-making, and organizational behavior",
+        "Experimental design: co-designed pilot behavioral studies on leadership, consumer decision-making, and organizational behavior",
         "Statistical analysis: ran regression models on 1,000+ participant responses to generate actionable behavioral insights for faculty researchers",
-        "Data cleaning: cleaned and validated 1,000+ survey responses in R before analysis, ensuring results were reproducible across studies",
+        "Qualitative coding: coded 481 open-ended participant responses into a structured codebook, converting free text into analyzable categorical data",
         "Research communication: presented experimental results and statistical analyses through written reports and slide decks to faculty and interdisciplinary teams",
       ],
     },
@@ -65,8 +65,7 @@ const DEFAULT_RESUME = {
         "Recommendation system: built and deployed a personalized nutrition recommendation platform in Python and SQL, increasing user engagement by 25%",
         "Model evaluation: benchmarked recommendations against expert-labeled references and used error analysis to drive the 15% accuracy improvement",
         "User research: integrated feedback from 10+ SkyDeck startup seminars into agile development cycles, aligning prototypes with user needs and business strategy",
-        "Data engineering: automated ingestion of 100+ research sources, replacing manual curation and making product data reproducible and scalable",
-        "Product analytics: instrumented and tracked user engagement on the deployed platform to measure the 25% lift after launch",
+        "Data engineering: built automated data pipelines supporting 10,000+ recommendation predictions, making product data reproducible and scalable",
       ],
     },
   ],
@@ -77,7 +76,7 @@ const DEFAULT_RESUME = {
       dates: "May 2023 – Aug 2024",
       bullets: [
         "A/B tests: designed and analyzed experiments for an iOS app used by 100+ athletes, translating results into feature decisions that increased average session duration by 30%",
-        "Product launch: built and shipped an iOS app from idea to App Store that applies sports psychology techniques to athletic performance for 100+ users",
+        "Product launch: built and shipped an iOS app from idea to launch that applies sports psychology techniques to athletic performance for 100+ athletes",
         "Partnership: led product strategy and a partnership with the National Alliance of Mental Health (NAMI) to drive adoption and iterate on community feedback",
         "Product analytics: defined engagement metrics and used them to prioritize features, growing average session duration 30%",
         "Product ownership: owned the full development cycle — user research, roadmap, build, launch, and iteration — as founder of a 100+ user product",
