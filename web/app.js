@@ -177,7 +177,7 @@ els.tailor.addEventListener("click", async () => {
 
 const WEIGHTS = { required: 50, preferred: 15, quality: 20, ordering: 15 };
 const WEAK = /\b(responsible for|helped|worked on|assisted with|various|participated in)\b/i;
-const IRREGULAR_VERBS = new Set(["built", "led", "ran", "drove", "grew", "wrote", "cut", "set", "won", "made", "met", "taught", "brought", "sold", "held", "kept", "chose", "began", "saw", "found", "oversaw", "spearheaded", "shipped", "co-designed", "codesigned"]);
+const IRREGULAR_VERBS = new Set(["fit", "fed", "built", "led", "ran", "drove", "grew", "wrote", "cut", "set", "won", "made", "met", "taught", "brought", "sold", "held", "kept", "chose", "began", "saw", "found", "oversaw", "spearheaded", "shipped", "co-designed", "codesigned"]);
 
 function hashJD(jd) { let h = 0; for (const c of jd) h = (h * 31 + c.charCodeAt(0)) | 0; return String(h); }
 

@@ -787,10 +787,10 @@ const DEFAULT_RESUME = {
       dates: "Jan 2026 – May 2026",
       bullets: [
         "Product roadmap: built a prioritized 90-day activation strategy for the theranostics business from customer-journey, workflow, and adoption-barrier research across 8+ organizations",
-        "Competitive analysis: mapped patient advocacy networks and competitive positioning across 8+ organizations to identify strategic growth opportunities for theranostics",
-        "Market research: synthesized adoption-barrier and workflow findings into partnership priorities across multiple product lines for a consulting deliverable to Siemens Healthineers",
-        "Stakeholder alignment: developed data-informed patient engagement strategies with clinical, marketing, and product teams to improve treatment access and navigation",
-        "Customer journey mapping: documented patient journeys across 8+ organizations to locate friction points blocking theranostics adoption",
+        "Competitive analysis: mapped patient advocacy networks and competitive positioning across 8+ organizations, surfacing strategic growth opportunities for the theranostics business",
+        "Market research: distilled workflow and adoption-barrier findings from 8+ organizations into ranked partnership priorities spanning multiple product lines",
+        "Stakeholder alignment: developed data-informed patient engagement strategies across 3 functions — clinical, marketing, and product — to improve treatment access and navigation",
+        "Customer journey mapping: documented patient journeys across 8+ organizations to pinpoint the friction points blocking theranostics adoption",
       ],
     },
     {
@@ -799,11 +799,11 @@ const DEFAULT_RESUME = {
       location: "San Francisco, CA",
       dates: "Jan 2025 – June 2025",
       bullets: [
-        "Model evaluation: scored 500+ AI-generated responses against structured quality metrics to identify recurring failure patterns and improve model performance",
-        "Training data: contributed high-signal examples to a 15,000+ response dataset used to refine model behavior and evaluation quality",
-        "Process optimization: streamlined the response-evaluation workflow through performance analysis and process redesign",
+        "Model evaluation: scored 500+ LLM responses against structured quality metrics, isolating recurring failure patterns that fed directly into model improvements",
+        "Training data: authored high-signal examples for a 15,000+ response training dataset used to refine model behavior and raise evaluation quality",
+        "Process optimization: redesigned the evaluation workflow for 500+ responses after a performance analysis, removing repeated manual steps",
         "Quality rubrics: applied structured, multi-criteria scoring rubrics to 500+ LLM outputs to grade accuracy, helpfulness, and safety",
-        "Error analysis: categorized recurring failure modes across 500+ responses and turned them into concrete guidance for model refinement",
+        "Error analysis: categorized failure modes across 500+ responses into a taxonomy that became concrete guidance for model refinement",
       ],
     },
     {
@@ -814,12 +814,11 @@ const DEFAULT_RESUME = {
       bullets: [
         "Hypothesis testing: structured open-ended behavioral research questions into testable hypotheses and analyzed 1,000+ participant responses in R using regression",
         "Behavioral research: examined 10+ factors that influence leadership and group behavior under Professors Cameron Anderson and Angus Hildreth",
-        "Experimental design: co-designed and ran pilot behavioral studies in Berkeley's BLab research network on leadership, consumer decision-making, and organizational behavior",
-        "Statistical analysis: ran regression models on 1,000+ participant responses to generate actionable behavioral insights for faculty researchers",
+        "Experimental design: co-designed and ran pilot behavioral studies in Berkeley's BLab research network, testing 10+ leadership and group-behavior factors",
+        "Statistical analysis: fit regression models to 1,000+ participant responses in R, producing behavioral insights that shaped follow-on study design",
         "Qualitative coding: coded 481 open-ended participant responses into a structured codebook, converting free text into analyzable categorical data",
-        "Independent research: initiated a study of 20+ political debate data points to analyze the strategies people use to gain leadership positions",
-        "AI in research: initiated an independent project measuring the influence of AI tools on research productivity within the lab",
-        "Research communication: presented experimental results and statistical analyses through written reports and slide decks to faculty and interdisciplinary teams",
+        "Independent research: initiated 2 self-directed projects — a 20+ data-point analysis of leadership-seeking strategies in political debates, and a study of AI tools' effect on research productivity",
+        "Research communication: presented experimental results and statistical analyses in written reports and slide decks to 2 faculty PIs and interdisciplinary teams",
       ],
     },
     {
@@ -830,8 +829,8 @@ const DEFAULT_RESUME = {
       bullets: [
         "ETL pipeline: engineered a Python and SQL pipeline to ingest, clean, and validate data from 100+ research sources, improving recommendation accuracy by 15%",
         "Recommendation system: built and deployed a personalized nutrition recommendation platform in Python and SQL, increasing user engagement by 25%",
-        "Model evaluation: benchmarked recommendations against expert-labeled references and used error analysis to drive the 15% accuracy improvement",
-        "User research: integrated feedback from 10+ SkyDeck startup seminars into agile development cycles, aligning prototypes with user needs and business strategy",
+        "Model evaluation: benchmarked recommendations against expert-labeled references and used error analysis to drive a 15% accuracy gain",
+        "User research: folded feedback from 10+ SkyDeck startup seminars into agile sprints, keeping prototypes aligned with user needs and business strategy",
         "Data engineering: built automated data pipelines supporting 10,000+ recommendation predictions, making product data reproducible and scalable",
       ],
     },
@@ -844,7 +843,7 @@ const DEFAULT_RESUME = {
       bullets: [
         "A/B tests: designed and analyzed experiments for an iOS app used by 100+ athletes, translating results into feature decisions that increased average session duration by 30%",
         "Product launch: built and shipped an iOS app from idea to launch that applies sports psychology techniques to athletic performance for 100+ athletes",
-        "Partnership: led product strategy and a partnership with the National Alliance of Mental Health (NAMI) to drive adoption and iterate on community feedback",
+        "Partnership: led product strategy and a partnership with the National Alliance of Mental Health (NAMI), driving adoption to 100+ athletes and iterating on community feedback",
         "Product analytics: defined engagement metrics and used them to prioritize features, growing average session duration 30%",
         "Product ownership: owned the full development cycle — user research, roadmap, build, launch, and iteration — as founder of a 100+ user product",
       ],
@@ -1187,7 +1186,7 @@ els.tailor.addEventListener("click", async () => {
 
 const WEIGHTS = { required: 50, preferred: 15, quality: 20, ordering: 15 };
 const WEAK = /\b(responsible for|helped|worked on|assisted with|various|participated in)\b/i;
-const IRREGULAR_VERBS = new Set(["built", "led", "ran", "drove", "grew", "wrote", "cut", "set", "won", "made", "met", "taught", "brought", "sold", "held", "kept", "chose", "began", "saw", "found", "oversaw", "spearheaded", "shipped", "co-designed", "codesigned"]);
+const IRREGULAR_VERBS = new Set(["fit", "fed", "built", "led", "ran", "drove", "grew", "wrote", "cut", "set", "won", "made", "met", "taught", "brought", "sold", "held", "kept", "chose", "began", "saw", "found", "oversaw", "spearheaded", "shipped", "co-designed", "codesigned"]);
 
 function hashJD(jd) { let h = 0; for (const c of jd) h = (h * 31 + c.charCodeAt(0)) | 0; return String(h); }
 
