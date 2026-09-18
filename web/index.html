@@ -1,0 +1,1150 @@
+<title>Resume Tailor</title>
+<style>
+:root {
+  --bg: #f4f4f1;
+  --panel: #ffffff;
+  --ink: #1b1b1f;
+  --muted: #6b6b70;
+  --line: #e2e2dd;
+  --accent: #1f5f5b;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6f0ef;
+  --danger: #b3261e;
+  --ok: #1f7a3a;
+  --radius: 10px;
+  --paper-bg: #ffffff;
+  --good: #1f7a3a;
+  --mid: #b7791f;
+  --low: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161715; --panel: #1f201d; --ink: #ecebe6; --muted: #a2a29c; --line: #34352f;
+    --accent: #6fb8b1; --accent-ink: #0f1f1e; --accent-soft: #1f302e; --danger: #f28b82; --ok: #7ed49a;
+    --good: #7ed49a; --mid: #e3b25b; --low: #f28b82;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161715; --panel: #1f201d; --ink: #ecebe6; --muted: #a2a29c; --line: #34352f;
+  --accent: #6fb8b1; --accent-ink: #0f1f1e; --accent-soft: #1f302e; --danger: #f28b82; --ok: #7ed49a;
+  --good: #7ed49a; --mid: #e3b25b; --low: #f28b82;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  display: inline-grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--accent); color: var(--accent-ink);
+  font-weight: 700; font-size: 12px; letter-spacing: 0.04em;
+}
+.brand-name { font-weight: 600; font-size: 15px; }
+
+.fit { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.fit.ok { background: var(--accent-soft); color: var(--ok); }
+.fit.warn { background: var(--accent-soft); color: var(--danger); }
+
+.layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px 20px;
+  height: calc(100% - 52px);
+}
+.layout.job-hidden { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr); }
+.layout.job-hidden #input-panel { display: none; }
+@media (max-width: 1100px) {
+  .layout, .layout.job-hidden { grid-template-columns: 1fr; height: auto; }
+  .layout.job-hidden #input-panel { display: flex; }
+  #expand-job { display: none !important; }
+  .pdf { min-height: 900px; }
+}
+
+.rail {
+  writing-mode: vertical-rl;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); color: var(--muted);
+  font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  cursor: pointer; padding: 12px 4px;
+}
+.rail:hover { background: var(--accent-soft); color: var(--accent); }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 12px;
+  min-height: 0;
+}
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field.grow { flex: 1; min-height: 0; }
+.label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+}
+.hint { font-size: 12px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+input[type="text"], input[type="password"], textarea {
+  width: 100%;
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 9px 11px; font: inherit; color: var(--ink); background: var(--bg);
+}
+textarea { resize: vertical; min-height: 160px; flex: 1; }
+.field.grow textarea { min-height: 200px; }
+input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+
+.actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.spacer { flex: 1; }
+
+.btn {
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 13px; font: inherit; font-weight: 600;
+  cursor: pointer; background: var(--panel); color: var(--ink);
+}
+.btn:hover { background: var(--accent-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(0.92); }
+.btn.ghost { background: transparent; }
+.btn.tiny { padding: 3px 8px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.status { margin: 0; font-size: 13px; color: var(--muted); min-height: 18px; }
+.status.error { color: var(--danger); }
+.status.busy::before {
+  content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px;
+  border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%;
+  animation: spin 0.8s linear infinite; vertical-align: -1px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Editor ── */
+.paper {
+  flex: 1; overflow: auto;
+  background: #fff; border: 1px solid var(--line); border-radius: 6px;
+  padding: 24px 28px;
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: 13.5px; line-height: 1.35; color: #000;
+}
+.paper .empty { color: var(--muted); font-family: inherit; text-align: center; margin-top: 60px; }
+
+.paper [contenteditable] { border-radius: 3px; padding: 0 2px; margin: 0 -2px; min-width: 8px; }
+.paper [contenteditable]:hover { background: var(--accent-soft); }
+.paper [contenteditable]:focus { outline: 2px solid var(--accent); outline-offset: 0; background: var(--paper-bg); }
+.paper [contenteditable]:empty::before { content: attr(data-ph); color: #999; }
+
+.r-name { text-align: center; font-size: 26px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.02em; }
+.r-contact { text-align: center; font-size: 12.5px; margin-bottom: 6px; }
+.r-sec { font-weight: 700; border-bottom: 1px solid #000; margin-top: 10px; margin-bottom: 4px; font-size: 14px; }
+.r-row { display: flex; justify-content: space-between; gap: 12px; }
+.r-row .l { font-weight: 700; }
+.r-row .r { font-size: 12.5px; white-space: nowrap; }
+.r-row.sub .l, .r-row.sub .r { font-style: italic; font-weight: 400; }
+.r-row .tech { font-style: italic; font-weight: 400; margin-left: 6px; }
+.r-line { margin: 1px 0; }
+.r-line.italic { font-style: italic; }
+.r-line b { font-weight: 700; }
+
+.bl-list { margin: 2px 0 4px; }
+.bl { display: flex; align-items: baseline; gap: 6px; padding-left: 6px; }
+.bl .dot { flex: 0 0 auto; }
+.bl .txt { flex: 1; }
+.bl .rm {
+  flex: 0 0 auto; border: 0; background: transparent; color: var(--muted);
+  font: inherit; font-size: 14px; line-height: 1; cursor: pointer; padding: 0 4px;
+  opacity: 0; transition: opacity 0.1s;
+}
+.bl:hover .rm, .bl:focus-within .rm { opacity: 1; }
+.bl .rm:hover { color: var(--danger); }
+.add-bl {
+  border: 0; background: transparent; color: var(--muted);
+  font: inherit; font-size: 12px; cursor: pointer; padding: 0 0 0 20px; margin-bottom: 6px;
+  opacity: 0.6;
+}
+.add-bl:hover { color: var(--accent); opacity: 1; }
+
+/* ── PDF ── */
+.pdf { flex: 1; width: 100%; border: 1px solid var(--line); border-radius: 6px; background: #525659; min-height: 0; }
+
+dialog {
+  background: var(--panel); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 12px; padding: 0;
+  width: min(760px, 92vw); height: min(80vh, 720px);
+}
+dialog::backdrop { background: rgba(20, 20, 24, 0.45); }
+.settings-form { display: flex; flex-direction: column; gap: 14px; padding: 22px; height: 100%; }
+.settings-form h2 { margin: 0; font-size: 18px; }
+.settings-form textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+
+body { padding-inline: 0; }
+.layout { padding: 16px; grid-template-columns: 380px minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 1100px) { .layout { padding: 16px; } .pdf { min-height: 700px; } }
+.input-panel { overflow: hidden; }
+.tabs { display: flex; gap: 2px; background: var(--bg); border-radius: 8px; padding: 3px; }
+.tab {
+  border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+}
+.tab.active { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+.tabpane { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; overflow: auto; }
+.tabpane[hidden] { display: none; }
+.tabpane .hint.lead { line-height: 1.4; }
+a.btn { text-decoration: none; display: inline-block; }
+
+.score-card { display: flex; align-items: baseline; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; }
+.score-big { font-size: 40px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.score-of { font-size: 14px; color: var(--muted); font-weight: 600; margin-left: 2px; }
+.score-big.good { color: var(--good); } .score-big.mid { color: var(--mid); } .score-big.low { color: var(--low); }
+.score-verdict { font-size: 13px; line-height: 1.4; }
+.bar-row { display: flex; flex-direction: column; gap: 3px; }
+.bar-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; }
+.bar-num { font-variant-numeric: tabular-nums; color: var(--muted); }
+.bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; }
+.bar-fill.good { background: var(--good); } .bar-fill.mid { background: var(--mid); } .bar-fill.low { background: var(--low); }
+.bar-note { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.sub-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--ink); }
+ul.plain { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.4; }
+ul.plain li { margin: 3px 0; }
+ol.sugg { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.4; }
+ol.sugg li { margin: 6px 0; }
+ol.sugg b { font-weight: 600; }
+.stale { font-size: 12px; padding: 8px 10px; border-radius: 6px; background: var(--accent-soft); color: var(--ink); }
+
+.target { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.target-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.target-role { font-weight: 600; font-size: 14px; }
+.target-why { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.msg { position: relative; font-size: 13px; line-height: 1.45; padding: 10px 12px; padding-right: 64px; background: var(--bg); border-radius: 6px; white-space: pre-wrap; }
+.msg .copy { position: absolute; top: 6px; right: 6px; }
+
+</style>
+
+<header class="topbar">
+  <div class="brand"><span class="brand-mark">RT</span><span class="brand-name">Resume Tailor</span></div>
+  <div class="topbar-right">
+    <span id="fit" class="fit"></span>
+    <button id="stop" class="btn ghost" type="button" hidden>Stop</button>
+    <button id="revert" class="btn ghost" type="button" hidden>Revert to Claude's version</button>
+    <button id="download" class="btn primary" type="button">Download PDF</button>
+    <button id="open-settings" class="btn ghost" type="button">Base resume</button>
+  </div>
+</header>
+
+<main class="layout" id="layout">
+  <section class="panel input-panel" id="input-panel">
+    <div class="panel-head">
+      <div class="tabs">
+        <button class="tab active" type="button" data-tab="job">Job</button>
+        <button class="tab" type="button" data-tab="score">Score</button>
+        <button class="tab" type="button" data-tab="outreach">Outreach</button>
+      </div>
+      <button id="collapse-job" class="btn tiny ghost" type="button" title="Hide this panel">Hide</button>
+    </div>
+
+    <div class="tabpane" id="tab-job">
+      <label class="field">
+        <span class="label">Company</span>
+        <input id="company" type="text" placeholder="Duolingo" autocomplete="off">
+      </label>
+      <label class="field grow">
+        <span class="label">Job description</span>
+        <textarea id="jd" placeholder="Paste the full job posting here."></textarea>
+      </label>
+      <div class="actions">
+        <button id="tailor" class="btn primary" type="button">Tailor with Claude</button>
+        <button id="use-base" class="btn ghost" type="button">Start from base</button>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+    </div>
+
+    <div class="tabpane" id="tab-score" hidden>
+      <p class="hint lead">Scores the resume exactly as it is now — your edits included — the way an applicant-tracking system and then a recruiter would read it against this posting. Aim for 85+ before you submit.</p>
+      <div class="actions">
+        <button id="rate" class="btn primary" type="button">Rate match</button>
+        <button id="improve" class="btn ghost" type="button" hidden>Apply suggestions</button>
+      </div>
+      <p id="score-status" class="status" aria-live="polite"></p>
+      <div id="score-out"></div>
+    </div>
+
+    <div class="tabpane" id="tab-outreach" hidden>
+      <p class="hint lead">Who to contact about this role, by job title, with a note written for each. It never guesses real names — use the LinkedIn search to find the actual person, then paste the note.</p>
+      <div class="actions">
+        <button id="outreach" class="btn primary" type="button">Find people to contact</button>
+      </div>
+      <p id="outreach-status" class="status" aria-live="polite"></p>
+      <div id="outreach-out"></div>
+    </div>
+  </section>
+
+  <button id="expand-job" class="rail" type="button" hidden title="Show panel">Job</button>
+
+  <section class="panel editor-panel">
+    <div class="panel-head">
+      <span class="label">Edit <span class="hint">— click any text to change it · Enter adds a bullet · Backspace on an empty bullet removes it</span></span>
+      <span id="saved" class="hint"></span>
+    </div>
+    <div id="paper" class="paper"></div>
+  </section>
+
+  <section class="panel pdf-panel">
+    <div class="panel-head"><span class="label">PDF <span class="hint">— exactly what you'll submit</span></span></div>
+    <iframe id="pdf" class="pdf" title="PDF preview"></iframe>
+  </section>
+</main>
+
+<dialog id="settings">
+  <form method="dialog" class="settings-form">
+    <h2>Base resume</h2>
+    <label class="field grow">
+      <span class="label">Base resume (JSON)</span>
+      <textarea id="base-resume" spellcheck="false"></textarea>
+      <span class="hint">Add every true bullet you have — more than fit on a page is fine. Claude picks the best three per role for each job. Saved in this browser only.</span>
+    </label>
+    <div class="actions">
+      <button id="reset-resume" class="btn ghost" type="button">Reset to default</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" type="button" id="cancel-settings">Cancel</button>
+      <button class="btn primary" type="button" id="save-settings">Save</button>
+    </div>
+    <p id="settings-status" class="status"></p>
+  </form>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script>
+// Base resume. Every bullet here is a true fact; the model picks the best
+// three per role for each job and rewrites them to match its language.
+const DEFAULT_RESUME = {
+  profile: {
+    name: "Aneesh Srirambhatla",
+    phone: "424-390-9605",
+    email: "aneeshsri@berkeley.edu",
+    linkedin: "linkedin.com/in/aneesh-sri",
+  },
+  education: {
+    school: "University of California, Berkeley",
+    grad: "Expected Graduation: Dec 2027",
+    degree: "B.A. Data Science | Certificate in Entrepreneurship & Technology",
+    coursework:
+      "Data Structures & Algorithms, Foundations of Data Science, Statistical Analysis, Computational Structures in Data Science, Python Programming",
+  },
+  experience: [
+    {
+      org: "Siemens Healthineers",
+      role: "Product & Strategy Intern",
+      location: "Berkeley, CA",
+      dates: "Jan 2026 – May 2026",
+      bullets: [
+        "Synthesized customer-journey, workflow, and adoption-barrier research across 8+ organizations into a prioritized 90-day product activation strategy",
+        "Analyzed patient advocacy networks and competitive positioning across 8+ organizations to identify strategic growth opportunities for theranostics business",
+        "Developed data-informed patient engagement strategies by collaborating across clinical, marketing, and product teams",
+        "Built a 90-day activation strategy from workflow and adoption-barrier research, prioritizing partnership opportunities across multiple product lines",
+      ],
+    },
+    {
+      org: "Mercor",
+      role: "AI Growth Intern",
+      location: "San Francisco, CA",
+      dates: "Jan 2025 – June 2025",
+      bullets: [
+        "Evaluated 500+ AI-generated responses using structured quality metrics to identify recurring patterns and improve model performance",
+        "Contributed to a 15,000+ response training dataset by creating high-signal examples used to refine model behavior and evaluation quality",
+        "Improved evaluation workflows by 15% through performance analysis and process optimization",
+      ],
+    },
+    {
+      org: "Haas School of Business Lab",
+      role: "Undergraduate Research Assistant",
+      location: "Berkeley, CA",
+      dates: "Feb 2025 – Aug 2026",
+      bullets: [
+        "Structured open-ended behavioral research questions into testable hypotheses; cleaned and analyzed 1,000+ participant responses using R, regression, and hypothesis testing",
+        "Designed behavioral research studies to understand leadership, consumer decision-making, and organizational behavior",
+        "Validated and communicated findings through written reports and slide decks to faculty and interdisciplinary research teams",
+        "Analyzed datasets containing 1,000+ participant responses using regression models and statistical analysis to generate actionable behavioral insights",
+      ],
+    },
+    {
+      org: "FlourishAI (Berkeley SkyDeck)",
+      role: "Software Engineer Intern",
+      location: "Berkeley, CA",
+      dates: "Dec 2024 – Aug 2025",
+      bullets: [
+        "Engineered a Python and SQL ETL pipeline to ingest, clean, and validate data from 100+ research sources; benchmarked recommendations against expert-labeled references and used error analysis to improve accuracy by 15%",
+        "Built and deployed a personalized nutrition recommendation platform using Python and SQL, increasing user engagement by 25%",
+        "Developed an automated data pipeline processing 100+ research sources, improving recommendation accuracy by 15%",
+        "Integrated continuous user feedback from 10+ SkyDeck startup seminars into agile development cycles, aligning product prototypes with user needs and business strategy",
+      ],
+    },
+  ],
+  projects: [
+    {
+      name: "Project GoalKeeper",
+      tech: "Founder & Product Lead | iOS, Python, A/B Testing",
+      dates: "May 2023 – Aug 2024",
+      bullets: [
+        "Designed and analyzed A/B tests for an iOS product used by 100+ athletes, translating behavioral data and user feedback into feature decisions that increased average session duration by 30%",
+        "Built and launched an iOS app to improve athletic performance through sports psychology techniques",
+        "Led product strategy and partnership with the National Alliance of Mental Health (NAMI), driving user adoption and iterating on features based on community feedback",
+        "Used product analytics and A/B testing to guide feature decisions, increasing average session duration by 30%",
+      ],
+    },
+  ],
+  skills: {
+    "Data & Analytics":
+      "SQL, Python (pandas, NumPy), R, statistical modeling, regression analysis, hypothesis testing, experimental design, A/B testing, data cleaning & validation, ETL pipelines, model evaluation",
+    "Languages & Tools": "Swift, Power BI, Git, Rust, Microsoft Azure, PostgreSQL",
+    Interests: "Consumer Technology, Product Strategy, Entrepreneurship, Experimental",
+  },
+};
+
+// Renders the resume with jsPDF's built-in Times face (no font files needed),
+// shrinking the type in small steps until everything fits on one page.
+
+function renderResumePDF(data) {
+  let result = null;
+  for (const scale of [1.0, 0.97, 0.94, 0.91, 0.88, 0.85]) {
+    result = drawResume(data, scale);
+    if (!result.overflow) break;
+  }
+  return result;
+}
+
+function drawResume(data, scale) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  doc.setLineHeightFactor(1.24);
+
+  const PW = doc.internal.pageSize.getWidth();
+  const PH = doc.internal.pageSize.getHeight();
+  const LM = 42, RM = 42, TM = 34, BM = 30;
+  const W = PW - LM - RM;
+  const f = (pt) => pt * scale;
+  const LH = (pt) => pt * scale * 1.24;
+  let y = TM;
+
+  const font = (style, size) => {
+    doc.setFont("times", style);
+    doc.setFontSize(f(size));
+  };
+  const textRight = (yy, s, size, style = "normal") => {
+    font(style, size);
+    doc.text(s, PW - RM - doc.getTextWidth(s), yy);
+  };
+  const row = (left, right, ls, rs, lstyle = "bold", rstyle = "normal") => {
+    y += f(ls);
+    font(lstyle, ls);
+    doc.text(left, LM, y);
+    textRight(y, right, rs, rstyle);
+    y += f(1.5);
+  };
+  const section = (title) => {
+    y += f(4) + f(10.5);
+    font("bold", 10.5);
+    doc.text(title, LM, y);
+    doc.setLineWidth(0.7);
+    doc.line(LM, y + f(2.5), PW - RM, y + f(2.5));
+    y += f(5);
+  };
+  const bullets = (items) => {
+    const size = 9.6;
+    const indent = f(11);
+    font("normal", size);
+    y += f(2.5);
+    for (const b of items) {
+      const lines = doc.splitTextToSize(b, W - indent);
+      const base = y + f(size) * 0.82;
+      doc.text("•", LM + f(3), base);
+      doc.text(lines, LM + indent, base);
+      y += lines.length * LH(size);
+    }
+    y += f(3.5);
+  };
+  // Paragraph with an optional bold "Label:" prefix; the first line wraps
+  // around the label, later lines use the full width.
+  const para = (txt, size, style = "normal", boldPrefix = null) => {
+    y += f(1.5);
+    const base = y + f(size) * 0.82;
+    let firstX = LM, firstW = W;
+    if (boldPrefix) {
+      font("bold", size);
+      doc.text(boldPrefix, LM, base);
+      // getTextWidth drops trailing spaces, so measure the space separately
+      const space = doc.getTextWidth("a a") - doc.getTextWidth("aa");
+      const pw = doc.getTextWidth(boldPrefix) * 1.02 + space;
+      firstX = LM + pw;
+      firstW = W - pw;
+    }
+    font(style, size);
+    const words = txt.split(/\s+/);
+    const lines = [];
+    let cur = "", limit = firstW;
+    for (const w of words) {
+      const trial = cur ? cur + " " + w : w;
+      if (doc.getTextWidth(trial) <= limit) cur = trial;
+      else { lines.push(cur); cur = w; limit = W; }
+    }
+    if (cur) lines.push(cur);
+    lines.forEach((line, i) => {
+      doc.text(line, i === 0 ? firstX : LM, base + i * LH(size));
+    });
+    y += lines.length * LH(size);
+  };
+
+  // Name in faux small caps
+  const pieces = [];
+  for (const word of data.profile.name.split(/\s+/)) {
+    pieces.push([word[0].toUpperCase(), 23]);
+    pieces.push([word.slice(1).toUpperCase() + " ", 17.5]);
+  }
+  let total = 0;
+  for (const [s, sz] of pieces) { font("bold", sz); total += doc.getTextWidth(s); }
+  let x = (PW - total) / 2;
+  y = TM + f(23);
+  for (const [s, sz] of pieces) {
+    font("bold", sz);
+    doc.text(s, x, y);
+    x += doc.getTextWidth(s);
+  }
+  y += f(3);
+
+  const p = data.profile;
+  const contact = `${p.phone}   |   ${p.email}   |   ${p.linkedin}`;
+  font("normal", 9.5);
+  y += f(9.5);
+  doc.text(contact, (PW - doc.getTextWidth(contact)) / 2, y);
+  y += f(1);
+
+  section("Education");
+  row(data.education.school, data.education.grad, 10, 9.2);
+  para(data.education.degree, 9.5, "italic");
+  para(data.education.coursework, 9.6, "normal", "Relevant Coursework:");
+
+  section("Experience");
+  for (const e of data.experience) {
+    row(e.org, e.dates, 10, 9.2);
+    row(e.role, e.location, 9.5, 9.2, "italic", "italic");
+    bullets(e.bullets);
+  }
+
+  section("Projects");
+  for (const pr of data.projects) {
+    y += f(10);
+    font("bold", 10);
+    doc.text(pr.name, LM, y);
+    const nx = LM + doc.getTextWidth(pr.name);
+    font("italic", 9.5);
+    doc.text(`| ${pr.tech}`, nx + f(4), y);
+    textRight(y, pr.dates, 9.2);
+    y += f(1.5);
+    bullets(pr.bullets);
+  }
+
+  section("Technical Skills");
+  for (const [cat, vals] of Object.entries(data.skills)) {
+    para(vals, 9.6, "normal", `${cat}:`);
+  }
+
+  return { doc, overflow: y > PH - BM, scale };
+}
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  layout: $("layout"), inputPanel: $("input-panel"), collapseJob: $("collapse-job"), expandJob: $("expand-job"),
+  company: $("company"), jd: $("jd"),
+  tailor: $("tailor"), useBase: $("use-base"), stop: $("stop"), status: $("status"), saved: $("saved"),
+  paper: $("paper"), pdf: $("pdf"), fit: $("fit"), download: $("download"), revert: $("revert"),
+  settings: $("settings"), openSettings: $("open-settings"),
+  baseResume: $("base-resume"), save: $("save-settings"), cancel: $("cancel-settings"),
+  reset: $("reset-resume"), settingsStatus: $("settings-status"),
+  rate: $("rate"), improve: $("improve"), scoreStatus: $("score-status"), scoreOut: $("score-out"),
+  outreach: $("outreach"), outreachStatus: $("outreach-status"), outreachOut: $("outreach-out"),
+};
+
+let state = {
+  base: DEFAULT_RESUME, doc: null, claudeVersion: null, pdfUrl: null,
+  sample: undefined, downloads: undefined, ctl: null,
+  score: null, scoreStale: false, targets: null,
+};
+
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const skillsToArray = (obj) => Object.entries(obj).map(([cat, vals]) => ({ cat, vals }));
+const skillsToObject = (arr) => Object.fromEntries(arr.filter((s) => s.cat).map((s) => [s.cat, s.vals]));
+
+function docFromTailored(t) {
+  return {
+    profile: clone(state.base.profile),
+    education: clone(state.base.education),
+    experience: clone(t.experience),
+    projects: clone(t.projects),
+    skills: Array.isArray(t.skills) ? clone(t.skills) : skillsToArray(t.skills),
+  };
+}
+const currentResume = () => ({ ...state.doc, skills: skillsToObject(state.doc.skills) });
+
+// ── Storage (per-viewer, this browser only) ──────────────────────────────
+
+const store = {
+  get(k) { try { const v = localStorage.getItem("rt:" + k); return v ? JSON.parse(v) : null; } catch (_) { return null; } },
+  set(k, v) { try { localStorage.setItem("rt:" + k, JSON.stringify(v)); } catch (_) {} },
+};
+
+function load() {
+  state.base = store.get("baseResume") || DEFAULT_RESUME;
+  if (store.get("jobHidden")) setJobHidden(true);
+  const last = store.get("lastResult");
+  if (last) {
+    els.company.value = last.company || "";
+    els.jd.value = last.jd || "";
+    state.doc = last.doc || null;
+    state.claudeVersion = last.claudeVersion || null;
+    state.score = last.score || null;
+    state.scoreStale = !!last.scoreStale;
+    state.targets = last.targets || null;
+  }
+  if (!state.doc) state.doc = baseDoc();
+  renderEditor(); refreshPdf();
+  if (state.score) renderScore();
+  if (state.targets) renderOutreach();
+  showTab(store.get("tab") || "job");
+}
+
+let saveTimer = null;
+function persist() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    store.set("lastResult", {
+      company: els.company.value.trim(), jd: els.jd.value, doc: state.doc, claudeVersion: state.claudeVersion,
+      score: state.score, scoreStale: state.scoreStale, targets: state.targets,
+    });
+    els.saved.textContent = "Saved";
+    setTimeout(() => { if (els.saved.textContent === "Saved") els.saved.textContent = ""; }, 1500);
+  }, 300);
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────
+
+function showTab(name) {
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
+  document.querySelectorAll(".tabpane").forEach((p) => { p.hidden = p.id !== `tab-${name}`; });
+  store.set("tab", name);
+}
+document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => showTab(t.dataset.tab)));
+
+// ── Claude (via the viewer's own claude.ai account) ──────────────────────
+
+const ERROR_COPY = {
+  not_granted: "Claude access wasn't allowed for this page. Editing and download still work.",
+  sampling_disabled: "Claude isn't available on this account. Editing and download still work.",
+  rate_limited: "Too many requests right now — try again in a minute.",
+  session_expired: "Your claude.ai session expired — sign in again and retry.",
+  prompt_too_large: "That job description is too long — paste just the role and requirements.",
+  invalid_json: "Claude's reply wasn't usable — try again.",
+  refused: "Claude declined this request — try a shorter job description.",
+  empty_completion: "Claude returned nothing — try again.",
+  cancelled: "Stopped.",
+};
+const HIDE_ON = new Set(["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"]);
+
+// Runs one Claude JSON call with shared busy/error handling.
+async function ask(prompt, { btn, statusEl, busyMsg, validate }) {
+  if (!state.sample) { setText(statusEl, "Claude isn't available in this view.", "error"); return null; }
+  state.ctl = new AbortController();
+  btn.disabled = true; els.stop.hidden = false;
+  setText(statusEl, busyMsg, "busy");
+  try {
+    const out = await state.sample.json(prompt, { signal: state.ctl.signal, cache: false });
+    if (validate && !validate(out)) throw { code: "invalid_json", message: "missing fields" };
+    setText(statusEl, "");
+    return out;
+  } catch (e) {
+    const code = e?.code || "upstream_error";
+    if (HIDE_ON.has(code)) { state.sample = null; hideClaudeButtons(); }
+    setText(statusEl, ERROR_COPY[code] ?? "Something went wrong reaching Claude — try again.", code === "cancelled" ? "" : "error");
+    return null;
+  } finally {
+    btn.disabled = false; els.stop.hidden = true; state.ctl = null;
+  }
+}
+els.stop.addEventListener("click", () => state.ctl?.abort());
+function hideClaudeButtons() { for (const b of [els.tailor, els.rate, els.improve, els.outreach]) b.hidden = true; }
+
+function baseJSON() {
+  return JSON.stringify({ experience: state.base.experience, projects: state.base.projects, skills: state.base.skills }, null, 2);
+}
+const SCHEMA = `{
+  "experience": [{"org": "...", "role": "...", "location": "...", "dates": "...", "bullets": ["b1", "b2", "b3"]}],
+  "projects": [{"name": "...", "tech": "...", "dates": "...", "bullets": ["b1", "b2"]}],
+  "skills": {"Data & Analytics": "...", "Languages & Tools": "...", "Interests": "..."}
+}`;
+const RULES = `Rules:
+- Keep every org/role/location/dates exactly as given, in the same order.
+- 3 bullets per experience, 2 per project. Rewrite to match the job's language, but keep every metric and fact true. Never add tools, titles, or experience that are not in the base resume.
+- Lead the skills lines with the tools and methods most relevant to this job. You may rename the first skills category to fit the role (e.g. "Product & Analytics").`;
+
+function tailorPrompt(jd) {
+  return `You are a professional resume writer for early-career (internship and new-grad) candidates. Tailor the candidate's resume to the job description below.
+
+Candidate's base resume (JSON) — the only source of truth:
+${baseJSON()}
+
+Job Description:
+${jd.slice(0, 12000)}
+
+Reply with only a JSON object in this exact schema:
+${SCHEMA}
+
+${RULES}`;
+}
+
+const validTailored = (t) => Array.isArray(t?.experience) && Array.isArray(t?.projects) && t?.skills && typeof t.skills === "object";
+
+function applyTailored(t, msg) {
+  state.doc = docFromTailored(t);
+  state.claudeVersion = clone(state.doc);
+  markScoreStale();
+  renderEditor(); refreshPdf(); persist();
+  setStatus(msg);
+}
+
+els.tailor.addEventListener("click", async () => {
+  const jd = els.jd.value.trim();
+  if (jd.length < 80) { setStatus("Paste the full job description first.", "error"); return; }
+  const t = await ask(tailorPrompt(jd), { btn: els.tailor, statusEl: els.status, busyMsg: "Tailoring with Claude — usually 15–40 seconds…", validate: validTailored });
+  if (!t) return;
+  applyTailored(t, "Done. Edit anything in the middle; the PDF on the right updates as you type. Then check the Score tab.");
+  setJobHidden(true);
+});
+
+// ── Score ────────────────────────────────────────────────────────────────
+
+function ratePrompt(jd) {
+  return `You are a senior recruiter and hiring manager screening early-career (internship / new-grad) applicants. Score how well this resume matches the job description, the way an applicant-tracking system and then a human reviewer would. Be specific and honest; a generic resume should score in the 50s, a strong tailored one in the 80s, and 95+ only if nothing meaningful is missing.
+
+Resume (JSON, the candidate's current draft):
+${JSON.stringify(currentResume(), null, 2)}
+
+Job Description:
+${jd.slice(0, 12000)}
+
+Reply with only a JSON object:
+{
+  "score": 0-100,
+  "verdict": "one plain sentence a recruiter would say about this resume for this role",
+  "breakdown": [
+    {"area": "Relevance to the role", "score": 0-100, "note": "one sentence"},
+    {"area": "Keyword coverage (ATS)", "score": 0-100, "note": "one sentence"},
+    {"area": "Impact and metrics", "score": 0-100, "note": "one sentence"},
+    {"area": "Clarity and concision", "score": 0-100, "note": "one sentence"},
+    {"area": "Early-career fit", "score": 0-100, "note": "one sentence"}
+  ],
+  "missingKeywords": ["terms from the job description that are genuinely absent from the resume"],
+  "gaps": ["the 2-4 most important things holding the score down"],
+  "suggestions": [{"where": "Siemens Healthineers, bullet 2", "change": "the exact rewritten bullet or edit to make"}]
+}
+
+Rules: at most 6 suggestions, each concrete enough to paste in. Suggestions must keep every fact and metric true and may only draw on experience already in the resume — never invent skills, tools, or results. missingKeywords must be terms that do not appear anywhere in the resume text.`;
+}
+const validScore = (s) => typeof s?.score === "number" && Array.isArray(s?.breakdown);
+
+els.rate.addEventListener("click", async () => {
+  const jd = els.jd.value.trim();
+  if (jd.length < 80) { setText(els.scoreStatus, "Paste the job description in the Job tab first.", "error"); return; }
+  const s = await ask(ratePrompt(jd), { btn: els.rate, statusEl: els.scoreStatus, busyMsg: "Scoring against the posting — usually 15–40 seconds…", validate: validScore });
+  if (!s) return;
+  state.score = s; state.scoreStale = false;
+  renderScore(); persist();
+});
+
+function improvePrompt(jd) {
+  const sugg = (state.score?.suggestions || []).map((s, i) => `${i + 1}. ${s.where}: ${s.change}`).join("\n");
+  const gaps = (state.score?.gaps || []).map((g) => `- ${g}`).join("\n");
+  return `You are a professional resume writer for early-career candidates. Revise the candidate's current resume draft to address the reviewer feedback below, so it scores as high as possible for this job.
+
+Current draft (JSON):
+${JSON.stringify(currentResume(), null, 2)}
+
+The candidate's full base resume (additional true bullets you may draw on):
+${baseJSON()}
+
+Job Description:
+${jd.slice(0, 12000)}
+
+Reviewer gaps:
+${gaps || "(none)"}
+
+Reviewer suggestions to apply:
+${sugg || "(none)"}
+
+Reply with only a JSON object in this exact schema:
+${SCHEMA}
+
+${RULES}
+- Apply every suggestion that can be applied truthfully. Keep the candidate's own edits where they don't conflict with the feedback.`;
+}
+
+els.improve.addEventListener("click", async () => {
+  const jd = els.jd.value.trim();
+  const t = await ask(improvePrompt(jd), { btn: els.improve, statusEl: els.scoreStatus, busyMsg: "Applying the suggestions — usually 15–40 seconds…", validate: validTailored });
+  if (!t) return;
+  applyTailored(t, "Suggestions applied. Check the edits, then rate again.");
+  setText(els.scoreStatus, "Applied. Rate again to see the new score.");
+});
+
+function renderScore() {
+  const s = state.score;
+  if (!s) { els.scoreOut.innerHTML = ""; els.improve.hidden = true; return; }
+  const score = Math.max(0, Math.min(100, Math.round(s.score)));
+  const tone = score >= 80 ? "good" : score >= 60 ? "mid" : "low";
+  const bars = (s.breakdown || []).map((b) => `
+    <div class="bar-row">
+      <div class="bar-head"><span>${esc(b.area)}</span><span class="bar-num">${esc(Math.round(b.score))}</span></div>
+      <div class="bar"><div class="bar-fill ${Math.round(b.score) >= 80 ? "good" : Math.round(b.score) >= 60 ? "mid" : "low"}" style="width:${Math.max(2, Math.min(100, Math.round(b.score)))}%"></div></div>
+      <div class="bar-note">${esc(b.note || "")}</div>
+    </div>`).join("");
+  const kw = (s.missingKeywords || []).length
+    ? `<div class="sub-label">Missing keywords</div><div class="chips">${s.missingKeywords.map((k) => `<span class="chip">${esc(k)}</span>`).join("")}</div>` : "";
+  const gaps = (s.gaps || []).length
+    ? `<div class="sub-label">What's holding it down</div><ul class="plain">${s.gaps.map((g) => `<li>${esc(g)}</li>`).join("")}</ul>` : "";
+  const sugg = (s.suggestions || []).length
+    ? `<div class="sub-label">Suggested edits</div><ol class="sugg">${s.suggestions.map((x) => `<li><b>${esc(x.where)}</b><div>${esc(x.change)}</div></li>`).join("")}</ol>` : "";
+  els.scoreOut.innerHTML = `
+    ${state.scoreStale ? `<div class="stale">Resume changed since this score — rate again for a fresh one.</div>` : ""}
+    <div class="score-card">
+      <div class="score-big ${tone}">${score}<span class="score-of">/100</span></div>
+      <div class="score-verdict">${esc(s.verdict || "")}</div>
+    </div>
+    ${bars}${kw}${gaps}${sugg}`;
+  els.improve.hidden = !(s.suggestions || []).length;
+}
+function markScoreStale() {
+  if (state.score && !state.scoreStale) { state.scoreStale = true; renderScore(); }
+}
+
+// ── Outreach ─────────────────────────────────────────────────────────────
+
+function outreachPrompt(company, jd) {
+  const p = state.base.profile;
+  return `You are a career coach helping a UC Berkeley Data Science student (expected graduation Dec 2027) get noticed for a specific role. Do NOT invent or guess any real person's name, email, or profile — describe people by role only.
+
+Candidate: ${p.name}. Resume (JSON):
+${JSON.stringify(currentResume(), null, 2)}
+
+Company: ${company || "the company in the job description"}
+Job Description:
+${jd.slice(0, 10000)}
+
+Suggest the 5 most useful kinds of people to contact about this role, most useful first — typically a university or early-career recruiter, the hiring manager or team lead for this team, a current intern or recent new-grad on the team, a UC Berkeley alum at the company, and one more that fits this company. For each give:
+- "role": the job title to look for (specific to this company and team)
+- "why": one sentence on why this person matters and what to ask them
+- "linkedinQuery": the exact words to type into LinkedIn people search to find them (company name plus title keywords; add "Berkeley" for the alum)
+- "note": a LinkedIn connection-request note under 280 characters, addressed to [Name], that mentions one specific true thing from the resume relevant to the role and one specific thing about the role or company. Warm, plain, no "I hope this finds you well", no flattery.
+- "followUp": a 3-4 sentence message for after they accept (or for email/InMail): a bit more about why the candidate fits, one concrete ask (a 15-minute chat, a referral, or advice on the process), and an easy out.
+
+Reply with only a JSON object: {"targets": [{"role": "...", "why": "...", "linkedinQuery": "...", "note": "...", "followUp": "..."}]}`;
+}
+const validTargets = (o) => Array.isArray(o?.targets) && o.targets.length > 0;
+
+els.outreach.addEventListener("click", async () => {
+  const jd = els.jd.value.trim();
+  if (jd.length < 80) { setText(els.outreachStatus, "Paste the job description in the Job tab first.", "error"); return; }
+  const o = await ask(outreachPrompt(els.company.value.trim(), jd), { btn: els.outreach, statusEl: els.outreachStatus, busyMsg: "Writing outreach for this role — usually 15–40 seconds…", validate: validTargets });
+  if (!o) return;
+  state.targets = o.targets;
+  renderOutreach(); persist();
+});
+
+function renderOutreach() {
+  const t = state.targets;
+  if (!t) { els.outreachOut.innerHTML = ""; return; }
+  els.outreachOut.innerHTML = t.map((x, i) => {
+    const q = encodeURIComponent(x.linkedinQuery || `${els.company.value.trim()} ${x.role}`);
+    return `
+    <div class="target">
+      <div class="target-head">
+        <div class="target-role">${i + 1}. ${esc(x.role)}</div>
+        <a class="btn tiny" href="https://www.linkedin.com/search/results/people/?keywords=${q}" target="_blank" rel="noopener">Search on LinkedIn</a>
+      </div>
+      <div class="target-why">${esc(x.why)}</div>
+      <div class="sub-label">Connection note <span class="hint">(${(x.note || "").length}/300)</span></div>
+      <div class="msg">${esc(x.note)}<button class="btn tiny copy" type="button" data-copy="${esc(x.note)}">Copy</button></div>
+      <div class="sub-label">After they accept</div>
+      <div class="msg">${esc(x.followUp)}<button class="btn tiny copy" type="button" data-copy="${esc(x.followUp)}">Copy</button></div>
+    </div>`;
+  }).join("");
+}
+
+els.outreachOut.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-copy]");
+  if (!b) return;
+  const text = b.dataset.copy;
+  try { await navigator.clipboard.writeText(text); }
+  catch (_) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.append(ta); ta.select();
+    try { document.execCommand("copy"); } catch (_) {}
+    ta.remove();
+  }
+  b.textContent = "Copied"; setTimeout(() => { b.textContent = "Copy"; }, 1200);
+});
+
+// ── Editor ───────────────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+const ed = (path, val, cls = "", ph = "") =>
+  `<span contenteditable="plaintext-only" data-path="${esc(path)}" data-ph="${esc(ph)}" class="${cls}">${esc(val)}</span>`;
+
+function bulletList(pathPrefix, items) {
+  const rows = items.map((b, j) => `
+    <div class="bl">
+      <span class="dot">•</span>
+      ${ed(`${pathPrefix}.${j}`, b, "txt", "New bullet")}
+      <button class="rm" type="button" data-rm="${esc(pathPrefix)}.${j}" title="Remove bullet">×</button>
+    </div>`).join("");
+  return `<div class="bl-list">${rows}</div><button class="add-bl" type="button" data-add="${esc(pathPrefix)}">+ Add bullet</button>`;
+}
+
+function renderEditor() {
+  const d = state.doc;
+  if (!d) return;
+  const exp = d.experience.map((e, i) => `
+    <div class="r-row"><span class="l">${ed(`experience.${i}.org`, e.org)}</span><span class="r">${ed(`experience.${i}.dates`, e.dates)}</span></div>
+    <div class="r-row sub"><span class="l">${ed(`experience.${i}.role`, e.role)}</span><span class="r">${ed(`experience.${i}.location`, e.location)}</span></div>
+    ${bulletList(`experience.${i}.bullets`, e.bullets)}`).join("");
+  const proj = d.projects.map((p, i) => `
+    <div class="r-row"><span><span class="l">${ed(`projects.${i}.name`, p.name)}</span><span class="tech">| ${ed(`projects.${i}.tech`, p.tech)}</span></span><span class="r">${ed(`projects.${i}.dates`, p.dates)}</span></div>
+    ${bulletList(`projects.${i}.bullets`, p.bullets)}`).join("");
+  const skills = d.skills.map((s, i) =>
+    `<div class="r-line"><b>${ed(`skills.${i}.cat`, s.cat)}:</b> ${ed(`skills.${i}.vals`, s.vals)}</div>`).join("");
+
+  els.paper.innerHTML = `
+    <div class="r-name">${ed("profile.name", d.profile.name)}</div>
+    <div class="r-contact">${ed("profile.phone", d.profile.phone)} &nbsp;|&nbsp; ${ed("profile.email", d.profile.email)} &nbsp;|&nbsp; ${ed("profile.linkedin", d.profile.linkedin)}</div>
+    <div class="r-sec">Education</div>
+    <div class="r-row"><span class="l">${ed("education.school", d.education.school)}</span><span class="r">${ed("education.grad", d.education.grad)}</span></div>
+    <div class="r-line italic">${ed("education.degree", d.education.degree)}</div>
+    <div class="r-line"><b>Relevant Coursework:</b> ${ed("education.coursework", d.education.coursework)}</div>
+    <div class="r-sec">Experience</div>${exp}
+    <div class="r-sec">Projects</div>${proj}
+    <div class="r-sec">Technical Skills</div>${skills}`;
+  els.revert.hidden = !state.claudeVersion;
+}
+
+function setPath(obj, path, value) {
+  const keys = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < keys.length - 1; i++) cur = cur[keys[i]];
+  cur[keys[keys.length - 1]] = value;
+}
+const getPath = (obj, path) => path.split(".").reduce((o, k) => o[k], obj);
+const cleanText = (s) => s.replace(/\s+/g, " ").trim();
+
+els.paper.addEventListener("input", (e) => {
+  const el = e.target.closest("[data-path]");
+  if (!el) return;
+  setPath(state.doc, el.dataset.path, cleanText(el.textContent));
+  markScoreStale(); scheduleRefresh(); persist();
+});
+
+els.paper.addEventListener("keydown", (e) => {
+  const el = e.target.closest("[data-path]");
+  if (!el) return;
+  const isBullet = el.classList.contains("txt");
+  if (e.key === "Enter") {
+    e.preventDefault();
+    if (!isBullet) { el.blur(); return; }
+    const [listPath, idx] = splitIndex(el.dataset.path);
+    getPath(state.doc, listPath).splice(idx + 1, 0, "");
+    renderEditor(); focusPath(`${listPath}.${idx + 1}`); markScoreStale(); scheduleRefresh(); persist();
+  } else if (e.key === "Backspace" && isBullet && el.textContent === "") {
+    e.preventDefault();
+    const [listPath, idx] = splitIndex(el.dataset.path);
+    const list = getPath(state.doc, listPath);
+    if (list.length <= 1) return;
+    list.splice(idx, 1);
+    renderEditor(); focusPath(`${listPath}.${Math.max(0, idx - 1)}`, true); markScoreStale(); scheduleRefresh(); persist();
+  }
+});
+
+els.paper.addEventListener("click", (e) => {
+  const rm = e.target.closest("[data-rm]");
+  const add = e.target.closest("[data-add]");
+  if (rm) {
+    const [listPath, idx] = splitIndex(rm.dataset.rm);
+    getPath(state.doc, listPath).splice(idx, 1);
+    renderEditor(); markScoreStale(); scheduleRefresh(); persist();
+  } else if (add) {
+    const list = getPath(state.doc, add.dataset.add);
+    list.push("");
+    renderEditor(); focusPath(`${add.dataset.add}.${list.length - 1}`); markScoreStale(); scheduleRefresh(); persist();
+  }
+});
+
+function splitIndex(path) { const i = path.lastIndexOf("."); return [path.slice(0, i), Number(path.slice(i + 1))]; }
+function focusPath(path, atEnd = false) {
+  const el = els.paper.querySelector(`[data-path="${CSS.escape(path)}"]`);
+  if (!el) return;
+  el.focus();
+  if (atEnd && el.firstChild) {
+    const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+}
+
+// ── PDF ──────────────────────────────────────────────────────────────────
+
+let refreshTimer = null;
+function scheduleRefresh() { clearTimeout(refreshTimer); refreshTimer = setTimeout(refreshPdf, 350); }
+function buildPdf() { return renderResumePDF(currentResume()); }
+
+function refreshPdf() {
+  if (!state.doc || !window.jspdf) return;
+  const { doc, overflow, scale } = buildPdf();
+  if (state.pdfUrl) URL.revokeObjectURL(state.pdfUrl);
+  state.pdfUrl = URL.createObjectURL(doc.output("blob"));
+  els.pdf.src = `${state.pdfUrl}#navpanes=0&view=FitH`;
+  if (overflow) { els.fit.textContent = "Runs past one page — trim a bullet"; els.fit.className = "fit warn"; }
+  else { els.fit.textContent = scale < 1 ? `Fits on one page · type at ${Math.round(scale * 100)}%` : "Fits on one page"; els.fit.className = "fit ok"; }
+}
+
+// ── Actions ──────────────────────────────────────────────────────────────
+
+function setText(el, msg, kind = "") { el.textContent = msg; el.className = `status ${kind}`.trim(); }
+function setStatus(msg, kind = "") { setText(els.status, msg, kind); }
+function setJobHidden(hidden) {
+  els.layout.classList.toggle("job-hidden", hidden);
+  els.expandJob.hidden = !hidden;
+  store.set("jobHidden", hidden);
+}
+els.collapseJob.addEventListener("click", () => setJobHidden(true));
+els.expandJob.addEventListener("click", () => setJobHidden(false));
+
+function baseDoc() {
+  const b = state.base;
+  return docFromTailored({
+    experience: b.experience.map((e) => ({ ...e, bullets: e.bullets.slice(0, 3) })),
+    projects: b.projects.map((p) => ({ ...p, bullets: p.bullets.slice(0, 2) })),
+    skills: b.skills,
+  });
+}
+els.useBase.addEventListener("click", () => {
+  state.doc = baseDoc(); state.claudeVersion = null;
+  markScoreStale(); renderEditor(); refreshPdf(); persist();
+  setStatus("Editing your base resume (no AI). The PDF updates as you type.");
+});
+els.revert.addEventListener("click", () => {
+  if (!state.claudeVersion) return;
+  state.doc = clone(state.claudeVersion);
+  markScoreStale(); renderEditor(); refreshPdf(); persist();
+  setStatus("Reverted to Claude's version.");
+});
+
+els.download.addEventListener("click", async () => {
+  const { doc, overflow, scale } = buildPdf();
+  const company = (els.company.value.trim() || "Resume").replace(/[^A-Za-z0-9_-]+/g, "_");
+  const name = state.doc.profile.name.replace(/\s+/g, "_");
+  const filename = `${name}_${company}.pdf`;
+  const fitNote = overflow ? " It still runs past one page — trim a bullet or two." : "";
+
+  if (state.downloads === undefined) { setStatus("Still connecting to claude.ai — try again in a second."); return; }
+  if (!state.downloads) { fallbackDownload(filename); return; }
+
+  els.download.disabled = true;
+  try {
+    await state.downloads.save({ filename, data: doc.output("blob") });
+    setStatus(`Saved ${filename}.${fitNote}`);
+  } catch (e) {
+    const code = e?.code;
+    if (code === "declined") setStatus("Download cancelled — click Download PDF again and choose Save when claude.ai asks.");
+    else if (code === "rate_limited") setStatus("A save prompt is already open — finish that one first.", "error");
+    else fallbackDownload(filename, code);
+  } finally {
+    els.download.disabled = false;
+  }
+});
+
+// When claude.ai can't save for us: open the PDF in its own tab, where the browser's
+// PDF viewer has a working Save button; the preview pane's toolbar has one too.
+function fallbackDownload(filename, code) {
+  let opened = null;
+  try { opened = window.open(state.pdfUrl, "_blank"); } catch (_) {}
+  const why = code ? ` (claude.ai save failed: ${code})` : "";
+  setStatus(opened
+    ? `Opened the PDF in a new tab — use its Save/Download button and name it ${filename}.${why}`
+    : `Use the download icon in the PDF pane's toolbar (top right of the preview) and name it ${filename}.${why}`,
+    "error");
+}
+
+els.company.addEventListener("input", persist);
+els.jd.addEventListener("input", persist);
+els.jd.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") els.tailor.click(); });
+
+// ── Base resume settings ─────────────────────────────────────────────────
+
+els.openSettings.addEventListener("click", () => {
+  els.baseResume.value = JSON.stringify(state.base, null, 2);
+  els.settingsStatus.textContent = "";
+  els.settings.showModal();
+});
+els.cancel.addEventListener("click", () => els.settings.close());
+els.reset.addEventListener("click", () => { els.baseResume.value = JSON.stringify(DEFAULT_RESUME, null, 2); });
+els.save.addEventListener("click", () => {
+  let base;
+  try {
+    base = JSON.parse(els.baseResume.value);
+    for (const k of ["profile", "education", "experience", "projects", "skills"]) if (!(k in base)) throw new Error(`Missing "${k}"`);
+  } catch (e) {
+    els.settingsStatus.textContent = `Resume JSON is invalid: ${e.message}`;
+    els.settingsStatus.className = "status error";
+    return;
+  }
+  state.base = base; store.set("baseResume", base);
+  els.settings.close();
+  setStatus("Base resume saved.");
+});
+
+// ── Capabilities light up when the viewer runtime answers ────────────────
+
+load();
+(async () => {
+  if (!window.claude?.use) {
+    state.sample = null; state.downloads = null;
+    hideClaudeButtons();
+    setStatus("Open this page inside claude.ai to use Claude. Editing and the PDF preview work here; download via the PDF pane's toolbar.");
+    return;
+  }
+  const [sample, downloads] = await Promise.all([claude.use("sample"), claude.use("downloads")]);
+  state.sample = sample; state.downloads = downloads;
+  const off = [];
+  if (!sample) { hideClaudeButtons(); off.push("Claude tailoring"); }
+  if (!downloads) off.push("one-click save");
+  if (off.length) setStatus(`${off.join(" and ")} ${off.length > 1 ? "aren't" : "isn't"} available in this view — usually because the page was opened outside the claude.ai viewer. Editing works; download via the PDF pane's toolbar.`);
+  else if (!els.status.textContent) setStatus("Paste a job description and click Tailor with Claude.");
+})();
+
+</script>
