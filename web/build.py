@@ -79,6 +79,11 @@ ol.sugg b { font-weight: 600; }
 .msg { position: relative; font-size: 13px; line-height: 1.45; padding: 10px 12px; padding-right: 64px; background: var(--bg); border-radius: 6px; white-space: pre-wrap; }
 .msg .copy { position: absolute; top: 6px; right: 6px; }
 ol.order li { margin: 1px 0; }
+.toast { flex: 1; min-width: 0; font-size: 13px; padding: 6px 12px; border-radius: 8px; background: var(--accent-soft); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast.ok { color: var(--good); }
+.toast.error { color: var(--danger); white-space: normal; }
+.toast.busy::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px; }
+.toast[hidden] { display: none; }
 .formula { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .formula-row { display: grid; grid-template-columns: 1fr auto 44px; gap: 10px; }
 .formula-row span:nth-child(2) { color: var(--muted); }
@@ -111,6 +116,7 @@ html = f"""<title>Resume Tailor</title>
 
 <header class="topbar">
   <div class="brand"><span class="brand-mark">RT</span><span class="brand-name">Resume Tailor</span></div>
+  <div id="toast" class="toast" hidden></div>
   <div class="topbar-right">
     <span id="fit" class="fit"></span>
     <button id="stop" class="btn ghost" type="button" hidden>Stop</button>

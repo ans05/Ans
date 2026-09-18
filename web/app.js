@@ -634,39 +634,53 @@ els.revert.addEventListener("click", () => {
 });
 
 els.download.addEventListener("click", async () => {
-  const { doc, overflow, scale } = buildPdf();
-  const company = (els.company.value.trim() || "Resume").replace(/[^A-Za-z0-9_-]+/g, "_");
-  const name = state.doc.profile.name.replace(/\s+/g, "_");
-  const filename = `${name}_${company}.pdf`;
-  const fitNote = overflow ? " It still runs past one page — trim a bullet or two." : "";
-
-  if (state.downloads === undefined) { setStatus("Still connecting to claude.ai — try again in a second."); return; }
-  if (!state.downloads) { fallbackDownload(filename); return; }
-
   els.download.disabled = true;
   try {
-    await state.downloads.save({ filename, data: doc.output("blob") });
-    setStatus(`Saved ${filename}.${fitNote}`);
+    const { doc, overflow, scale } = buildPdf();
+    const company = (els.company.value.trim() || "Resume").replace(/[^A-Za-z0-9_-]+/g, "_");
+    const name = state.doc.profile.name.replace(/\s+/g, "_");
+    const filename = `${name}_${company}.pdf`;
+    const fitNote = overflow ? " Note: it still runs past one page — trim a bullet or two." : "";
+
+    if (!window.claude?.use) { toast("This page isn't inside the claude.ai viewer, so it can't save files. Open it from claude.ai.", "error"); return; }
+    if (state.downloads === undefined) state.downloads = await claude.use("downloads");
+
+    // Ask for the download permission explicitly so the consent dialog is never skipped silently.
+    const perms = await claude.use("permissions");
+    let pstate = "unknown";
+    if (perms) {
+      pstate = await perms.state("downloads");
+      if (pstate === "prompt") { toast("claude.ai is asking for permission to save files — choose Allow.", "busy"); pstate = (await perms.request(["downloads"])).downloads; }
+    }
+    if (pstate === "denied") { toast("You declined file saving for this page load. Reload the page and choose Allow when asked.", "error"); return; }
+    if (!state.downloads || pstate === "unavailable") { toast(`Saving isn't available in this view (downloads: ${pstate}). Open the page from claude.ai in a desktop browser.`, "error"); return; }
+
+    toast("Preparing the PDF — confirm the save when claude.ai asks…", "busy");
+    const res = await state.downloads.save({ filename, data: doc.output("blob") });
+    toast(res?.status === "delivered" ? `Delivered ${filename}.` : `Saved ${filename}.${fitNote}`, "ok");
   } catch (e) {
-    const code = e?.code;
-    if (code === "declined") setStatus("Download cancelled — click Download PDF again and choose Save when claude.ai asks.");
-    else if (code === "rate_limited") setStatus("A save prompt is already open — finish that one first.", "error");
-    else fallbackDownload(filename, code);
+    const code = e?.code || (e?.message ? `error: ${e.message}` : "unknown");
+    const copy = {
+      declined: "Download cancelled — click Download PDF again and choose Save when claude.ai asks.",
+      rate_limited: "A save prompt is already open — finish that one first.",
+      too_large: "The PDF was rejected as too large — remove a bullet and try again.",
+      not_granted: "File saving hasn't been allowed for this page — reload and choose Allow when asked.",
+      unavailable: "Saving isn't available in this view — open the page from claude.ai in a desktop browser.",
+    }[code];
+    toast(copy || `Couldn't save the PDF (${code}). Tell Claude this code and it can fix it.`, "error");
   } finally {
     els.download.disabled = false;
   }
 });
 
-// When claude.ai can't save for us: open the PDF in its own tab, where the browser's
-// PDF viewer has a working Save button; the preview pane's toolbar has one too.
-function fallbackDownload(filename, code) {
-  let opened = null;
-  try { opened = window.open(state.pdfUrl, "_blank"); } catch (_) {}
-  const why = code ? ` (claude.ai save failed: ${code})` : "";
-  setStatus(opened
-    ? `Opened the PDF in a new tab — use its Save/Download button and name it ${filename}.${why}`
-    : `Use the download icon in the PDF pane's toolbar (top right of the preview) and name it ${filename}.${why}`,
-    "error");
+// Top-bar notice that is visible from every tab and every panel state.
+let toastTimer = null;
+function toast(msg, kind = "") {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = `toast ${kind}`.trim(); t.hidden = false;
+  clearTimeout(toastTimer);
+  if (kind !== "busy") toastTimer = setTimeout(() => { t.hidden = true; }, kind === "error" ? 12000 : 6000);
+  setStatus(msg, kind === "error" ? "error" : "");
 }
 
 els.company.addEventListener("input", persist);
@@ -711,7 +725,7 @@ load();
   state.sample = sample; state.downloads = downloads;
   const off = [];
   if (!sample) { hideClaudeButtons(); off.push("Claude tailoring"); }
-  if (!downloads) off.push("one-click save");
-  if (off.length) setStatus(`${off.join(" and ")} ${off.length > 1 ? "aren't" : "isn't"} available in this view — usually because the page was opened outside the claude.ai viewer. Editing works; download via the PDF pane's toolbar.`);
+  if (!downloads) off.push("file saving");
+  if (off.length) setStatus(`${off.join(" and ")} ${off.length > 1 ? "aren't" : "isn't"} available in this view — usually because the page was opened outside the claude.ai viewer. Editing works.`);
   else if (!els.status.textContent) setStatus("Paste a job description and click Tailor with Claude.");
 })();
