@@ -1,5 +1,6 @@
 // Base resume. Every bullet here is a true fact; the model picks the best
 // three per role for each job and rewrites them to match its language.
+// Keep the pool larger than what fits on a page — more angles, more matches.
 const DEFAULT_RESUME = {
   profile: {
     name: "Aneesh Srirambhatla",
@@ -21,10 +22,11 @@ const DEFAULT_RESUME = {
       location: "Berkeley, CA",
       dates: "Jan 2026 – May 2026",
       bullets: [
-        "Synthesized customer-journey, workflow, and adoption-barrier research across 8+ organizations into a prioritized 90-day product activation strategy",
-        "Analyzed patient advocacy networks and competitive positioning across 8+ organizations to identify strategic growth opportunities for theranostics business",
-        "Developed data-informed patient engagement strategies by collaborating across clinical, marketing, and product teams",
-        "Built a 90-day activation strategy from workflow and adoption-barrier research, prioritizing partnership opportunities across multiple product lines",
+        "Product roadmap: built a prioritized 90-day activation strategy for the theranostics business from customer-journey, workflow, and adoption-barrier research across 8+ organizations",
+        "Competitive analysis: mapped patient advocacy networks and competitive positioning across 8+ organizations to identify strategic growth opportunities for theranostics",
+        "Market research: synthesized adoption-barrier and workflow findings into partnership priorities across multiple product lines, presented to product and strategy leadership",
+        "Stakeholder alignment: developed data-informed patient engagement strategies with clinical, marketing, and product teams to improve treatment access and navigation",
+        "Customer journey mapping: documented patient and provider journeys across 8+ organizations to locate friction points blocking theranostics adoption",
       ],
     },
     {
@@ -33,9 +35,11 @@ const DEFAULT_RESUME = {
       location: "San Francisco, CA",
       dates: "Jan 2025 – June 2025",
       bullets: [
-        "Evaluated 500+ AI-generated responses using structured quality metrics to identify recurring patterns and improve model performance",
-        "Contributed to a 15,000+ response training dataset by creating high-signal examples used to refine model behavior and evaluation quality",
-        "Improved evaluation workflows by 15% through performance analysis and process optimization",
+        "Model evaluation: scored 500+ AI-generated responses against structured quality metrics to identify recurring failure patterns and improve model performance",
+        "Training data: contributed high-signal examples to a 15,000+ response dataset used to refine model behavior and evaluation quality",
+        "Process optimization: improved evaluation workflow throughput by 15% through performance analysis and process redesign",
+        "Quality rubrics: applied structured, multi-criteria scoring rubrics to LLM outputs so evaluations were consistent across reviewers",
+        "Error analysis: categorized recurring failure modes across 500+ responses and turned them into concrete guidance for model refinement",
       ],
     },
     {
@@ -44,10 +48,11 @@ const DEFAULT_RESUME = {
       location: "Berkeley, CA",
       dates: "Feb 2025 – Aug 2026",
       bullets: [
-        "Structured open-ended behavioral research questions into testable hypotheses; cleaned and analyzed 1,000+ participant responses using R, regression, and hypothesis testing",
-        "Designed behavioral research studies to understand leadership, consumer decision-making, and organizational behavior",
-        "Validated and communicated findings through written reports and slide decks to faculty and interdisciplinary research teams",
-        "Analyzed datasets containing 1,000+ participant responses using regression models and statistical analysis to generate actionable behavioral insights",
+        "Hypothesis testing: structured open-ended behavioral research questions into testable hypotheses and analyzed 1,000+ participant responses in R using regression",
+        "Experimental design: designed behavioral research studies on leadership, consumer decision-making, and organizational behavior",
+        "Statistical analysis: ran regression models on 1,000+ participant responses to generate actionable behavioral insights for faculty researchers",
+        "Data cleaning: cleaned and validated 1,000+ survey responses in R before analysis, ensuring results were reproducible across studies",
+        "Research communication: presented experimental results and statistical analyses through written reports and slide decks to faculty and interdisciplinary teams",
       ],
     },
     {
@@ -56,30 +61,33 @@ const DEFAULT_RESUME = {
       location: "Berkeley, CA",
       dates: "Dec 2024 – Aug 2025",
       bullets: [
-        "Engineered a Python and SQL ETL pipeline to ingest, clean, and validate data from 100+ research sources; benchmarked recommendations against expert-labeled references and used error analysis to improve accuracy by 15%",
-        "Built and deployed a personalized nutrition recommendation platform using Python and SQL, increasing user engagement by 25%",
-        "Developed an automated data pipeline processing 100+ research sources, improving recommendation accuracy by 15%",
-        "Integrated continuous user feedback from 10+ SkyDeck startup seminars into agile development cycles, aligning product prototypes with user needs and business strategy",
+        "ETL pipeline: engineered a Python and SQL pipeline to ingest, clean, and validate data from 100+ research sources, improving recommendation accuracy by 15%",
+        "Recommendation system: built and deployed a personalized nutrition recommendation platform in Python and SQL, increasing user engagement by 25%",
+        "Model evaluation: benchmarked recommendations against expert-labeled references and used error analysis to drive the 15% accuracy improvement",
+        "User research: integrated feedback from 10+ SkyDeck startup seminars into agile development cycles, aligning prototypes with user needs and business strategy",
+        "Data engineering: automated ingestion of 100+ research sources, replacing manual curation and making product data reproducible and scalable",
+        "Product analytics: instrumented and tracked user engagement on the deployed platform to measure the 25% lift after launch",
       ],
     },
   ],
   projects: [
     {
       name: "Project GoalKeeper",
-      tech: "Founder & Product Lead | iOS, Python, A/B Testing",
+      tech: "Founder & Product Lead | iOS, Swift, A/B Testing, Product Analytics",
       dates: "May 2023 – Aug 2024",
       bullets: [
-        "Designed and analyzed A/B tests for an iOS product used by 100+ athletes, translating behavioral data and user feedback into feature decisions that increased average session duration by 30%",
-        "Built and launched an iOS app to improve athletic performance through sports psychology techniques",
-        "Led product strategy and partnership with the National Alliance of Mental Health (NAMI), driving user adoption and iterating on features based on community feedback",
-        "Used product analytics and A/B testing to guide feature decisions, increasing average session duration by 30%",
+        "A/B tests: designed and analyzed experiments for an iOS app used by 100+ athletes, translating results into feature decisions that increased average session duration by 30%",
+        "Product launch: built and shipped an iOS app from idea to App Store that applies sports psychology techniques to athletic performance for 100+ users",
+        "Partnership: led product strategy and a partnership with the National Alliance of Mental Health (NAMI) to drive adoption and iterate on community feedback",
+        "Product analytics: defined engagement metrics and used them to prioritize features, growing average session duration 30%",
+        "Product ownership: owned the full development cycle — user research, roadmap, build, launch, and iteration — as founder of a 100+ user product",
       ],
     },
   ],
   skills: {
-    "Data & Analytics":
-      "SQL, Python (pandas, NumPy), R, statistical modeling, regression analysis, hypothesis testing, experimental design, A/B testing, data cleaning & validation, ETL pipelines, model evaluation",
-    "Languages & Tools": "Swift, Power BI, Git, Rust, Microsoft Azure, PostgreSQL",
-    Interests: "Consumer Technology, Product Strategy, Entrepreneurship, Experimental",
+    Languages: "Python (pandas, NumPy), SQL, R, Swift, Rust",
+    "Data & ML": "ETL pipelines, data cleaning & validation, recommendation systems, model evaluation, error analysis, PostgreSQL",
+    "Analytics & Experimentation": "A/B testing, experimental design, hypothesis testing, regression analysis, statistical modeling, product analytics",
+    "Product & Tools": "product roadmapping, user research, competitive analysis, stakeholder management, Power BI, Git, Microsoft Azure",
   },
 };
