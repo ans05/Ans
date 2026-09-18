@@ -40,7 +40,8 @@ const store = {
 };
 
 function load() {
-  state.base = store.get("baseResume") || DEFAULT_RESUME;
+  // The built-in base resume wins unless the user has deliberately customized it in Settings.
+  state.base = store.get("baseCustomized") ? (store.get("baseResume") || DEFAULT_RESUME) : DEFAULT_RESUME;
   if (store.get("jobHidden")) setJobHidden(true);
   const last = store.get("lastResult");
   if (last) {
@@ -707,9 +708,10 @@ els.save.addEventListener("click", () => {
     els.settingsStatus.className = "status error";
     return;
   }
-  state.base = base; store.set("baseResume", base);
+  const customized = JSON.stringify(base) !== JSON.stringify(DEFAULT_RESUME);
+  state.base = base; store.set("baseResume", base); store.set("baseCustomized", customized);
   els.settings.close();
-  setStatus("Base resume saved.");
+  setStatus(customized ? "Base resume saved. It will keep your version over future updates." : "Base resume reset to the built-in default.");
 });
 
 // ── Capabilities light up when the viewer runtime answers ────────────────

@@ -196,7 +196,7 @@ html = f"""<title>Resume Tailor</title>
     <label class="field grow">
       <span class="label">Base resume (JSON)</span>
       <textarea id="base-resume" spellcheck="false"></textarea>
-      <span class="hint">Add every true bullet you have — more than fit on a page is fine. Claude picks the best three per role for each job. Saved in this browser only.</span>
+      <span class="hint">Add every true bullet you have — more than fit on a page is fine. Claude picks the best three per role for each job. Saved in this browser only. If you edit it, your version is kept over future built-in updates until you Reset to default.</span>
     </label>
     <div class="actions">
       <button id="reset-resume" class="btn ghost" type="button">Reset to default</button>
