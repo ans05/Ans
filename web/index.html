@@ -1192,6 +1192,39 @@ const WEIGHTS = { required: 50, preferred: 15, quality: 20, ordering: 15 };
 const WEAK = /\b(responsible for|helped|worked on|assisted with|various|participated in)\b/i;
 const IRREGULAR_VERBS = new Set(["fit", "fed", "built", "led", "ran", "drove", "grew", "wrote", "cut", "set", "won", "made", "met", "taught", "brought", "sold", "held", "kept", "chose", "began", "saw", "found", "oversaw", "spearheaded", "shipped", "co-designed", "codesigned"]);
 
+// Standard resume equivalences an ATS or recruiter treats as the same thing.
+// Keys and values are matched as phrases (all stemmed words must appear).
+const SYNONYMS = {
+  "experimentation": ["a/b test", "a/b tests", "a/b testing", "experiments", "experimental design", "hypothesis testing"],
+  "experimentation plans": ["a/b test", "a/b tests", "a/b testing", "experimental design", "designed experiments"],
+  "a/b testing": ["a/b test", "a/b tests", "experiments", "experimentation"],
+  "specifications": ["spec", "specs", "requirements", "prd", "roadmap"],
+  "product specifications": ["spec", "specs", "requirements", "prd", "roadmap"],
+  "go-to-market": ["launch", "launched", "shipped", "gtm", "activation strategy"],
+  "go-to-market briefs": ["launch", "launched", "shipped", "gtm", "activation strategy"],
+  "stakeholder communication": ["stakeholder", "stakeholders", "presented", "slide decks", "reports", "cross-functional"],
+  "stakeholder management": ["stakeholder", "stakeholders", "cross-functional", "partnership"],
+  "cross-functional": ["clinical, marketing, and product", "stakeholder", "partnership", "interdisciplinary"],
+  "product development": ["built and shipped", "shipped", "launched", "development cycle", "built and deployed", "product launch"],
+  "product management": ["product roadmap", "product strategy", "product ownership", "product lead", "roadmap"],
+  "product strategy": ["roadmap", "product ownership", "activation strategy"],
+  "user research": ["user feedback", "customer journey", "interviews", "participant responses", "community feedback"],
+  "data analysis": ["analyzed", "regression", "statistical analysis", "sql", "pandas"],
+  "statistical analysis": ["regression", "hypothesis testing", "statistical"],
+  "statistical modeling": ["regression", "regression models"],
+  "data pipelines": ["etl pipeline", "etl", "pipeline", "pipelines"],
+  "etl": ["pipeline", "pipelines", "ingest"],
+  "machine learning": ["model evaluation", "recommendation system", "recommendation systems", "llm", "training data"],
+  "python": ["pandas", "numpy"],
+  "communication": ["presented", "reports", "slide decks"],
+  "dashboards": ["power bi", "tableau", "looker"],
+  "metrics": ["engagement metrics", "quality metrics", "kpis", "session duration"],
+  "forecasting": ["forecast", "time series", "predictions"],
+};
+
+// Requirements that are not skills/experience and should never be scored.
+const NON_SKILL = /\b(degree|bachelor|pursuing|graduat|gpa|enrolled|passionate|passion|curiosity|curious|self-starter|team player|communication skills|interpersonal|eligib|authorized to work|located in|relocat|available to|hours per week|duolingo streak)\b/i;
+
 function hashJD(jd) { let h = 0; for (const c of jd) h = (h * 31 + c.charCodeAt(0)) | 0; return String(h); }
 
 function stem(w) {
@@ -1201,10 +1234,16 @@ function stem(w) {
 }
 const tokens = (t) => String(t).split(/[\s,;()|/]+/).map(stem).filter(Boolean);
 
-// A keyword matches when every one of its stemmed words appears in the text.
-function keywordHits(keyword, tokSet) {
-  const ks = tokens(keyword);
+// A phrase matches when every one of its stemmed words appears in the token set.
+function phraseHits(phrase, tokSet) {
+  const ks = tokens(phrase);
   return ks.length > 0 && ks.every((k) => tokSet.has(k));
+}
+// A keyword matches directly, or via any curated synonym phrase. Returns the phrase that hit.
+function keywordHits(keyword, tokSet) {
+  if (phraseHits(keyword, tokSet)) return keyword;
+  for (const alt of SYNONYMS[String(keyword).toLowerCase()] || []) if (phraseHits(alt, tokSet)) return alt;
+  return null;
 }
 
 function resumeUnits(doc) {
@@ -1232,13 +1271,17 @@ function bulletQuality(text) {
 
 function analyze(reqs, doc) {
   const units = resumeUnits(doc);
+  const docToks = new Set(units.flatMap((u) => [...u.toks]));
   const items = reqs.map((r) => {
-    let hit = null, kw = null;
+    let hit = null, kw = null, via = null;
     for (const k of r.keywords || []) {
-      const u = units.find((u) => keywordHits(k, u.toks));
-      if (u) { hit = u; kw = k; break; }
+      // Prefer a single bullet that carries the whole phrase; fall back to the whole document (how ATS software matches).
+      let u = null, v = null;
+      for (const cand of units) { v = keywordHits(k, cand.toks); if (v) { u = cand; break; } }
+      if (!u) { v = keywordHits(k, docToks); if (v) { const ks = tokens(v); u = units.map((c) => ({ c, n: ks.filter((t) => c.toks.has(t)).length })).sort((a, b) => b.n - a.n)[0].c; } }
+      if (u) { hit = u; kw = k; via = v; break; }
     }
-    return { ...r, matched: !!hit, matchedKeyword: kw, matchedWhere: hit?.where || null, matchedText: hit?.text || null };
+    return { ...r, matched: !!hit, matchedKeyword: kw, matchedVia: via && via !== kw ? via : null, matchedWhere: hit?.where || null, matchedText: hit?.text || null };
   });
   const req = items.filter((r) => r.type === "required"), pref = items.filter((r) => r.type !== "required");
   const reqCov = req.length ? req.filter((r) => r.matched).length / req.length : 1;
@@ -1272,7 +1315,7 @@ function analyze(reqs, doc) {
 function extractPrompt(jd) {
   return `Extract the qualifications from this job posting. Reply with only a JSON object:
 {"requirements": [{"requirement": "one qualification, quoted or closely paraphrased from the posting", "type": "required" | "preferred", "keywords": ["2-5 short terms an ATS would match for it, as they'd appear on a resume, e.g. \\"SQL\\", \\"A/B testing\\", \\"statistical modeling\\""]}]}
-Rules: "required" = listed under must-have / basic / minimum / "you have"; "preferred" = nice-to-have / bonus / "exceptional candidates". Skip degree-in-progress, graduation-date, location, and personality traits (curiosity, communication) — only skills, tools, methods, and experience. 5-15 items. Keywords must be concrete terms, never sentences.
+Rules: "required" = listed under must-have / basic / minimum / "you have" / "what you'll do"; "preferred" = nice-to-have / bonus / "exceptional candidates". Skip degree-in-progress, graduation-date, GPA, location, work authorization, and personality traits (curiosity, passion, communication style) — only skills, tools, methods, and kinds of experience. 5-15 items. Keywords: 3-6 per item, concrete terms as they would appear on a resume, including at least two SINGLE-WORD forms (e.g. "experimentation", "A/B testing", "experiments") — never sentences, never generic words like "engineering" or "team" on their own.
 
 Job posting:
 ${jd.slice(0, 12000)}`;
@@ -1297,7 +1340,11 @@ async function ensureRequirements(jd) {
   if (state.reqs?.hash === h) return state.reqs.items;
   const out = await ask(extractPrompt(jd), { btn: els.rate, statusEl: els.scoreStatus, busyMsg: "Reading the posting's qualifications (one-time per job)…", validate: validReqs });
   if (!out) return null;
-  state.reqs = { hash: h, items: out.requirements.map((r) => ({ requirement: r.requirement, type: r.type === "preferred" ? "preferred" : "required", keywords: r.keywords.map(String) })) };
+  const GENERIC = new Set(["engineering", "team", "teams", "product", "data", "business", "users", "experience", "work", "skills"]);
+  state.reqs = { hash: h, items: out.requirements
+    .filter((r) => !NON_SKILL.test(r.requirement))
+    .map((r) => ({ requirement: r.requirement, type: r.type === "preferred" ? "preferred" : "required", keywords: r.keywords.map(String).filter((k) => !GENERIC.has(k.trim().toLowerCase())) }))
+    .filter((r) => r.keywords.length) };
   return state.reqs.items;
 }
 
@@ -1456,7 +1503,7 @@ function renderScore() {
       <li class="${r.matched ? "ok" : "miss"}">
         <span class="mark">${r.matched ? "✓" : "✗"}</span>
         <span class="req"><span>${esc(r.requirement)}</span>
-          ${r.matched ? `<span class="ev">matched “${esc(r.matchedKeyword)}” in ${esc(r.matchedWhere)}</span>` : `<span class="ev">looked for: ${(r.keywords || []).map(esc).join(", ")}</span>`}
+          ${r.matched ? `<span class="ev">matched “${esc(r.matchedKeyword)}”${r.matchedVia ? ` via “${esc(r.matchedVia)}”` : ""} in ${esc(r.matchedWhere)}</span>` : `<span class="ev">looked for: ${(r.keywords || []).map(esc).join(", ")}</span>`}
         </span>
       </li>`).join("")}</ul>`;
   };
