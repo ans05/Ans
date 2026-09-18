@@ -78,6 +78,14 @@ ol.sugg b { font-weight: 600; }
 .target-why { font-size: 13px; color: var(--muted); line-height: 1.4; }
 .msg { position: relative; font-size: 13px; line-height: 1.45; padding: 10px 12px; padding-right: 64px; background: var(--bg); border-radius: 6px; white-space: pre-wrap; }
 .msg .copy { position: absolute; top: 6px; right: 6px; }
+ol.order li { margin: 1px 0; }
+.entry { position: relative; }
+.mover { position: absolute; left: -30px; top: 1px; display: none; flex-direction: column; gap: 0; }
+.entry:hover .mover, .entry:focus-within .mover { display: flex; }
+.mv { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 11px; line-height: 1; cursor: pointer; padding: 1px 4px; }
+.mv:hover:not(:disabled) { color: var(--accent); }
+.mv:disabled { opacity: 0.25; cursor: default; }
+.paper { padding-left: 44px; }
 """
 
 data = (E / "resume-data.js").read_text()

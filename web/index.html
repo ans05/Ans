@@ -239,6 +239,14 @@ ol.sugg b { font-weight: 600; }
 .target-why { font-size: 13px; color: var(--muted); line-height: 1.4; }
 .msg { position: relative; font-size: 13px; line-height: 1.45; padding: 10px 12px; padding-right: 64px; background: var(--bg); border-radius: 6px; white-space: pre-wrap; }
 .msg .copy { position: absolute; top: 6px; right: 6px; }
+ol.order li { margin: 1px 0; }
+.entry { position: relative; }
+.mover { position: absolute; left: -30px; top: 1px; display: none; flex-direction: column; gap: 0; }
+.entry:hover .mover, .entry:focus-within .mover { display: flex; }
+.mv { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 11px; line-height: 1; cursor: pointer; padding: 1px 4px; }
+.mv:hover:not(:disabled) { color: var(--accent); }
+.mv:disabled { opacity: 0.25; cursor: default; }
+.paper { padding-left: 44px; }
 
 </style>
 
@@ -702,12 +710,14 @@ const SCHEMA = `{
   "skills": {"Data & Analytics": "...", "Languages & Tools": "...", "Interests": "..."}
 }`;
 const RULES = `Rules:
-- Keep every org/role/location/dates exactly as given, in the same order.
-- 3 bullets per experience, 2 per project. Rewrite to match the job's language, but keep every metric and fact true. Never add tools, titles, or experience that are not in the base resume.
-- Lead the skills lines with the tools and methods most relevant to this job. You may rename the first skills category to fit the role (e.g. "Product & Analytics").`;
+- ATS first. Applicant-tracking systems match on exact wording, so use the job description's own terms verbatim wherever they are truthfully applicable (e.g. if it says "experimentation" and "customer-journey data", write those exact words, not synonyms). Every required qualification in the posting that the candidate genuinely meets must be visibly evidenced by at least one bullet or skills entry.
+- ORDER experiences by relevance to this job, most relevant first — recruiters read top-down and rarely reach the bottom. Do the same for projects. Reorder freely; only include entries that exist in the base resume.
+- Keep every org/role/location/dates exactly as given (never change facts).
+- 3 bullets per experience, 2 per project, most relevant bullet first. Rewrite to match the job's language, but keep every metric and fact true. Never add tools, titles, or experience that are not in the base resume.
+- Lead the skills lines with the exact tools and methods this posting names, then the rest. You may rename the first skills category to fit the role (e.g. "Product & Analytics").`;
 
 function tailorPrompt(jd) {
-  return `You are a professional resume writer for early-career (internship and new-grad) candidates. Tailor the candidate's resume to the job description below.
+  return `You are a professional resume writer for early-career (internship and new-grad) candidates who optimizes for applicant-tracking systems (ATS) first and human readers second. Tailor the candidate's resume to the job description below so it ranks as highly as possible in ATS keyword matching while staying completely truthful.
 
 Candidate's base resume (JSON) — the only source of truth:
 ${baseJSON()}
@@ -743,7 +753,7 @@ els.tailor.addEventListener("click", async () => {
 // ── Score ────────────────────────────────────────────────────────────────
 
 function ratePrompt(jd) {
-  return `You are a senior recruiter and hiring manager screening early-career (internship / new-grad) applicants. Score how well this resume matches the job description, the way an applicant-tracking system and then a human reviewer would. Be specific and honest; a generic resume should score in the 50s, a strong tailored one in the 80s, and 95+ only if nothing meaningful is missing.
+  return `You are a senior recruiter and hiring manager screening early-career (internship / new-grad) applicants. Score how well this resume matches the job description. Weight it the way the real pipeline does: the applicant-tracking system (ATS) keyword/qualification match comes FIRST and should count for about 40% of the overall score, because a resume that fails ATS is never read. Then judge it as a human reviewer would. Be specific and honest; a generic resume should score in the 50s, a strong tailored one in the 80s, and 95+ only if nothing meaningful is missing.
 
 Resume (JSON, the candidate's current draft):
 ${JSON.stringify(currentResume(), null, 2)}
@@ -756,18 +766,19 @@ Reply with only a JSON object:
   "score": 0-100,
   "verdict": "one plain sentence a recruiter would say about this resume for this role",
   "breakdown": [
+    {"area": "ATS keyword & qualification match", "score": 0-100, "note": "one sentence naming what matched and what didn't"},
     {"area": "Relevance to the role", "score": 0-100, "note": "one sentence"},
-    {"area": "Keyword coverage (ATS)", "score": 0-100, "note": "one sentence"},
+    {"area": "Ordering (strongest first)", "score": 0-100, "note": "one sentence: is the most relevant experience at the top?"},
     {"area": "Impact and metrics", "score": 0-100, "note": "one sentence"},
-    {"area": "Clarity and concision", "score": 0-100, "note": "one sentence"},
-    {"area": "Early-career fit", "score": 0-100, "note": "one sentence"}
+    {"area": "Clarity and concision", "score": 0-100, "note": "one sentence"}
   ],
+  "suggestedOrder": ["org names from the resume in the order they should appear, most relevant first"],
   "missingKeywords": ["terms from the job description that are genuinely absent from the resume"],
   "gaps": ["the 2-4 most important things holding the score down"],
   "suggestions": [{"where": "Siemens Healthineers, bullet 2", "change": "the exact rewritten bullet or edit to make"}]
 }
 
-Rules: at most 6 suggestions, each concrete enough to paste in. Suggestions must keep every fact and metric true and may only draw on experience already in the resume — never invent skills, tools, or results. missingKeywords must be terms that do not appear anywhere in the resume text.`;
+Rules: at most 6 suggestions, each concrete enough to paste in. Prefer suggestions that add the posting's exact required terms where truthful. suggestedOrder must contain exactly the org names present in the resume. Suggestions must keep every fact and metric true and may only draw on experience already in the resume — never invent skills, tools, or results. missingKeywords must be terms that do not appear anywhere in the resume text.`;
 }
 const validScore = (s) => typeof s?.score === "number" && Array.isArray(s?.breakdown);
 
@@ -804,7 +815,8 @@ Reply with only a JSON object in this exact schema:
 ${SCHEMA}
 
 ${RULES}
-- Apply every suggestion that can be applied truthfully. Keep the candidate's own edits where they don't conflict with the feedback.`;
+- Apply every suggestion that can be applied truthfully. Keep the candidate's own edits where they don't conflict with the feedback.
+- If a suggested order was given, use it: ${JSON.stringify(state.score?.suggestedOrder || [])}`;
 }
 
 els.improve.addEventListener("click", async () => {
@@ -826,6 +838,12 @@ function renderScore() {
       <div class="bar"><div class="bar-fill ${Math.round(b.score) >= 80 ? "good" : Math.round(b.score) >= 60 ? "mid" : "low"}" style="width:${Math.max(2, Math.min(100, Math.round(b.score)))}%"></div></div>
       <div class="bar-note">${esc(b.note || "")}</div>
     </div>`).join("");
+  const currentOrder = state.doc.experience.map((e) => e.org);
+  const so = Array.isArray(s.suggestedOrder) && s.suggestedOrder.length ? s.suggestedOrder : null;
+  const orderDiffers = so && so.join("|") !== currentOrder.join("|");
+  const order = so
+    ? `<div class="sub-label">Suggested order</div><ol class="plain order">${so.map((o) => `<li>${esc(o)}</li>`).join("")}</ol>${orderDiffers ? `<button class="btn tiny" type="button" id="apply-order">Reorder to match</button>` : `<div class="hint">Already in this order.</div>`}`
+    : "";
   const kw = (s.missingKeywords || []).length
     ? `<div class="sub-label">Missing keywords</div><div class="chips">${s.missingKeywords.map((k) => `<span class="chip">${esc(k)}</span>`).join("")}</div>` : "";
   const gaps = (s.gaps || []).length
@@ -838,8 +856,17 @@ function renderScore() {
       <div class="score-big ${tone}">${score}<span class="score-of">/100</span></div>
       <div class="score-verdict">${esc(s.verdict || "")}</div>
     </div>
-    ${bars}${kw}${gaps}${sugg}`;
+    ${bars}${order}${kw}${gaps}${sugg}`;
   els.improve.hidden = !(s.suggestions || []).length;
+  document.getElementById("apply-order")?.addEventListener("click", () => {
+    const byOrg = new Map(state.doc.experience.map((e) => [e.org.trim().toLowerCase(), e]));
+    const next = [];
+    for (const name of so) { const e = byOrg.get(String(name).trim().toLowerCase()); if (e) { next.push(e); byOrg.delete(e.org.trim().toLowerCase()); } }
+    next.push(...byOrg.values());
+    state.doc.experience = next;
+    markScoreStale(); renderEditor(); refreshPdf(); persist();
+    setText(els.scoreStatus, "Reordered. Rate again to confirm the score.");
+  });
 }
 function markScoreStale() {
   if (state.score && !state.scoreStale) { state.scoreStale = true; renderScore(); }
@@ -932,12 +959,13 @@ function bulletList(pathPrefix, items) {
 function renderEditor() {
   const d = state.doc;
   if (!d) return;
+  const mover = (list, i, n) => `<span class="mover"><button type="button" class="mv" data-move="${list}.${i}.-1" title="Move up" ${i === 0 ? "disabled" : ""}>↑</button><button type="button" class="mv" data-move="${list}.${i}.1" title="Move down" ${i === n - 1 ? "disabled" : ""}>↓</button></span>`;
   const exp = d.experience.map((e, i) => `
-    <div class="r-row"><span class="l">${ed(`experience.${i}.org`, e.org)}</span><span class="r">${ed(`experience.${i}.dates`, e.dates)}</span></div>
+    <div class="r-row entry"><span class="l">${mover("experience", i, d.experience.length)}${ed(`experience.${i}.org`, e.org)}</span><span class="r">${ed(`experience.${i}.dates`, e.dates)}</span></div>
     <div class="r-row sub"><span class="l">${ed(`experience.${i}.role`, e.role)}</span><span class="r">${ed(`experience.${i}.location`, e.location)}</span></div>
     ${bulletList(`experience.${i}.bullets`, e.bullets)}`).join("");
   const proj = d.projects.map((p, i) => `
-    <div class="r-row"><span><span class="l">${ed(`projects.${i}.name`, p.name)}</span><span class="tech">| ${ed(`projects.${i}.tech`, p.tech)}</span></span><span class="r">${ed(`projects.${i}.dates`, p.dates)}</span></div>
+    <div class="r-row entry"><span>${mover("projects", i, d.projects.length)}<span class="l">${ed(`projects.${i}.name`, p.name)}</span><span class="tech">| ${ed(`projects.${i}.tech`, p.tech)}</span></span><span class="r">${ed(`projects.${i}.dates`, p.dates)}</span></div>
     ${bulletList(`projects.${i}.bullets`, p.bullets)}`).join("");
   const skills = d.skills.map((s, i) =>
     `<div class="r-line"><b>${ed(`skills.${i}.cat`, s.cat)}:</b> ${ed(`skills.${i}.vals`, s.vals)}</div>`).join("");
@@ -994,6 +1022,15 @@ els.paper.addEventListener("keydown", (e) => {
 els.paper.addEventListener("click", (e) => {
   const rm = e.target.closest("[data-rm]");
   const add = e.target.closest("[data-add]");
+  const mv = e.target.closest("[data-move]");
+  if (mv) {
+    const [list, i, dir] = mv.dataset.move.split(".");
+    const arr = state.doc[list]; const from = Number(i), to = from + Number(dir);
+    if (to < 0 || to >= arr.length) return;
+    [arr[from], arr[to]] = [arr[to], arr[from]];
+    renderEditor(); markScoreStale(); scheduleRefresh(); persist();
+    return;
+  }
   if (rm) {
     const [listPath, idx] = splitIndex(rm.dataset.rm);
     getPath(state.doc, listPath).splice(idx, 1);
