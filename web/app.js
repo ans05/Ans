@@ -14,7 +14,7 @@ const els = {
 let state = {
   base: DEFAULT_RESUME, doc: null, claudeVersion: null, pdfUrl: null,
   sample: undefined, downloads: undefined, ctl: null,
-  score: null, scoreStale: false, targets: null,
+  score: null, reqs: null, suggestions: null, targets: null,
 };
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -48,13 +48,13 @@ function load() {
     els.jd.value = last.jd || "";
     state.doc = last.doc || null;
     state.claudeVersion = last.claudeVersion || null;
-    state.score = last.score || null;
-    state.scoreStale = !!last.scoreStale;
+    state.reqs = last.reqs || null;
+    state.suggestions = last.suggestions || null;
     state.targets = last.targets || null;
   }
   if (!state.doc) state.doc = baseDoc();
   renderEditor(); refreshPdf();
-  if (state.score) renderScore();
+  rescore();
   if (state.targets) renderOutreach();
   showTab(store.get("tab") || "job");
 }
@@ -65,7 +65,7 @@ function persist() {
   saveTimer = setTimeout(() => {
     store.set("lastResult", {
       company: els.company.value.trim(), jd: els.jd.value, doc: state.doc, claudeVersion: state.claudeVersion,
-      score: state.score, scoreStale: state.scoreStale, targets: state.targets,
+      reqs: state.reqs, suggestions: state.suggestions, targets: state.targets,
     });
     els.saved.textContent = "Saved";
     setTimeout(() => { if (els.saved.textContent === "Saved") els.saved.textContent = ""; }, 1500);
@@ -168,127 +168,241 @@ els.tailor.addEventListener("click", async () => {
   setJobHidden(true);
 });
 
-// ── Score ────────────────────────────────────────────────────────────────
+// ── Score (deterministic; one narrow model call for suggestions) ─────────
+//
+// score = 50% required coverage + 15% preferred coverage
+//       + 20% bullet-quality pass rate + 15% ordering
+// If the posting lists no preferred qualifications, that 15% goes to required.
 
-function ratePrompt(jd) {
-  return `You are a senior recruiter and hiring manager screening early-career (internship / new-grad) applicants. Score how well this resume matches the job description. Weight it the way the real pipeline does: the applicant-tracking system (ATS) keyword/qualification match comes FIRST and should count for about 40% of the overall score, because a resume that fails ATS is never read. Then judge it as a human reviewer would. Be specific and honest; a generic resume should score in the 50s, a strong tailored one in the 80s, and 95+ only if nothing meaningful is missing.
+const WEIGHTS = { required: 50, preferred: 15, quality: 20, ordering: 15 };
+const WEAK = /\b(responsible for|helped|worked on|assisted with|various|participated in)\b/i;
+const IRREGULAR_VERBS = new Set(["built", "led", "ran", "drove", "grew", "wrote", "cut", "set", "won", "made", "met", "taught", "brought", "sold", "held", "kept", "chose", "began", "saw", "found", "oversaw", "spearheaded", "shipped", "co-designed", "codesigned"]);
 
-Resume (JSON, the candidate's current draft):
-${JSON.stringify(currentResume(), null, 2)}
+function hashJD(jd) { let h = 0; for (const c of jd) h = (h * 31 + c.charCodeAt(0)) | 0; return String(h); }
 
-Job Description:
-${jd.slice(0, 12000)}
+function stem(w) {
+  w = w.toLowerCase().replace(/[^a-z0-9+#/.-]/g, "");
+  if (w.length <= 3) return w;
+  return w.replace(/(ations?|ization|izing|ising|ings?|ies|ied|ers?|ed|es|s)$/, (m) => (m === "ies" || m === "ied" ? "y" : ""));
+}
+const tokens = (t) => String(t).split(/[\s,;()|/]+/).map(stem).filter(Boolean);
 
-Reply with only a JSON object:
-{
-  "score": 0-100,
-  "verdict": "one plain sentence a recruiter would say about this resume for this role",
-  "breakdown": [
-    {"area": "ATS keyword & qualification match", "score": 0-100, "note": "one sentence naming what matched and what didn't"},
-    {"area": "Relevance to the role", "score": 0-100, "note": "one sentence"},
-    {"area": "Ordering (strongest first)", "score": 0-100, "note": "one sentence: is the most relevant experience at the top?"},
-    {"area": "Impact and metrics", "score": 0-100, "note": "one sentence"},
-    {"area": "Clarity and concision", "score": 0-100, "note": "one sentence"}
-  ],
-  "suggestedOrder": ["org names from the resume in the order they should appear, most relevant first"],
-  "missingKeywords": ["terms from the job description that are genuinely absent from the resume"],
-  "gaps": ["the 2-4 most important things holding the score down"],
-  "suggestions": [{"where": "Siemens Healthineers, bullet 2", "change": "the exact rewritten bullet or edit to make"}]
+// A keyword matches when every one of its stemmed words appears in the text.
+function keywordHits(keyword, tokSet) {
+  const ks = tokens(keyword);
+  return ks.length > 0 && ks.every((k) => tokSet.has(k));
 }
 
-Rules: at most 6 suggestions, each concrete enough to paste in. Prefer suggestions that add the posting's exact required terms where truthful. suggestedOrder must contain exactly the org names present in the resume. Suggestions must keep every fact and metric true and may only draw on experience already in the resume — never invent skills, tools, or results. missingKeywords must be terms that do not appear anywhere in the resume text.`;
+function resumeUnits(doc) {
+  const units = [];
+  doc.experience.forEach((e, i) => e.bullets.forEach((b, j) => units.push({ text: b, where: `${e.org}, bullet ${j + 1}`, section: "experience", i, j })));
+  doc.projects.forEach((p, i) => {
+    units.push({ text: p.tech, where: `${p.name}, tech line`, section: "projects", i, j: -1 });
+    p.bullets.forEach((b, j) => units.push({ text: b, where: `${p.name}, bullet ${j + 1}`, section: "projects", i, j }));
+  });
+  doc.skills.forEach((s) => units.push({ text: `${s.cat}: ${s.vals}`, where: `Skills — ${s.cat}`, section: "skills", i: -1, j: -1 }));
+  units.push({ text: doc.education.coursework, where: "Coursework", section: "education", i: -1, j: -1 });
+  for (const u of units) u.toks = new Set(tokens(u.text));
+  return units;
 }
-const validScore = (s) => typeof s?.score === "number" && Array.isArray(s?.breakdown);
+
+function bulletQuality(text) {
+  const body = text.replace(/^[^:]{1,40}:\s*/, "");
+  const first = body.split(/\s+/)[0]?.toLowerCase() || "";
+  const verb = /ed$/.test(first) || IRREGULAR_VERBS.has(first);
+  const number = /\d|%/.test(text);
+  const length = text.length <= 200;
+  const strong = !WEAK.test(text);
+  return { verb, number, length, strong, pass: verb && number && length && strong };
+}
+
+function analyze(reqs, doc) {
+  const units = resumeUnits(doc);
+  const items = reqs.map((r) => {
+    let hit = null, kw = null;
+    for (const k of r.keywords || []) {
+      const u = units.find((u) => keywordHits(k, u.toks));
+      if (u) { hit = u; kw = k; break; }
+    }
+    return { ...r, matched: !!hit, matchedKeyword: kw, matchedWhere: hit?.where || null, matchedText: hit?.text || null };
+  });
+  const req = items.filter((r) => r.type === "required"), pref = items.filter((r) => r.type !== "required");
+  const reqCov = req.length ? req.filter((r) => r.matched).length / req.length : 1;
+  const prefCov = pref.length ? pref.filter((r) => r.matched).length / pref.length : null;
+
+  const bullets = units.filter((u) => u.j >= 0).map((u) => ({ where: u.where, text: u.text, ...bulletQuality(u.text) }));
+  const quality = bullets.length ? bullets.filter((b) => b.pass).length / bullets.length : 1;
+
+  // Ordering: the experience matching the most required keywords should be first.
+  const reqKeywords = req.flatMap((r) => r.keywords || []);
+  const expScores = doc.experience.map((e, i) => {
+    const toks = new Set(tokens(e.bullets.join(" ")));
+    return { i, org: e.org, hits: reqKeywords.filter((k) => keywordHits(k, toks)).length };
+  });
+  const bestHits = Math.max(0, ...expScores.map((x) => x.hits));
+  const best = expScores.find((x) => x.hits === bestHits);
+  const ordering = bestHits === 0 || expScores[0].hits === bestHits ? 1 : expScores[1]?.hits === bestHits ? 0.5 : 0;
+
+  const w = { ...WEIGHTS };
+  if (prefCov === null) { w.required += w.preferred; w.preferred = 0; }
+  const parts = {
+    required: { weight: w.required, value: reqCov, points: w.required * reqCov, label: `${req.filter((r) => r.matched).length}/${req.length} required qualifications matched` },
+    preferred: { weight: w.preferred, value: prefCov ?? 0, points: w.preferred * (prefCov ?? 0), label: pref.length ? `${pref.filter((r) => r.matched).length}/${pref.length} preferred matched` : "no preferred qualifications in posting" },
+    quality: { weight: w.quality, value: quality, points: w.quality * quality, label: `${bullets.filter((b) => b.pass).length}/${bullets.length} bullets pass all checks` },
+    ordering: { weight: w.ordering, value: ordering, points: w.ordering * ordering, label: ordering === 1 ? "strongest experience is first" : `${best?.org} matches the most required keywords (${bestHits}) but is not first` },
+  };
+  const score = Math.round(Object.values(parts).reduce((a, p) => a + p.points, 0));
+  return { score, parts, items, bullets, expScores, bestOrg: best?.org || null, ordering };
+}
+
+function extractPrompt(jd) {
+  return `Extract the qualifications from this job posting. Reply with only a JSON object:
+{"requirements": [{"requirement": "one qualification, quoted or closely paraphrased from the posting", "type": "required" | "preferred", "keywords": ["2-5 short terms an ATS would match for it, as they'd appear on a resume, e.g. \\"SQL\\", \\"A/B testing\\", \\"statistical modeling\\""]}]}
+Rules: "required" = listed under must-have / basic / minimum / "you have"; "preferred" = nice-to-have / bonus / "exceptional candidates". Skip degree-in-progress, graduation-date, location, and personality traits (curiosity, communication) — only skills, tools, methods, and experience. 5-15 items. Keywords must be concrete terms, never sentences.
+
+Job posting:
+${jd.slice(0, 12000)}`;
+}
+const validReqs = (o) => Array.isArray(o?.requirements) && o.requirements.every((r) => r && typeof r.requirement === "string" && Array.isArray(r.keywords));
+
+function suggestPrompt(missing) {
+  return `A candidate's resume is missing evidence for the qualifications below. For each, decide whether it can be TRUTHFULLY evidenced from the candidate's base resume (the only source of truth). If yes, write one resume bullet (under 200 characters, starting with the matching keyword, then a past-tense verb, then what/how/result) using only facts already in the base resume, and name the org it belongs under. If it cannot be evidenced without inventing anything, answer NO.
+
+Base resume (JSON):
+${baseJSON()}
+
+Missing qualifications:
+${missing.map((m, i) => `${i + 1}. ${m.requirement} (keywords: ${(m.keywords || []).join(", ")})`).join("\n")}
+
+Reply with only JSON: {"suggestions": [{"requirement": "...", "evidenced": true|false, "org": "exact org or project name from the base resume, or null", "bullet": "the bullet, or null"}]}`;
+}
+const validSugg = (o) => Array.isArray(o?.suggestions);
+
+async function ensureRequirements(jd) {
+  const h = hashJD(jd);
+  if (state.reqs?.hash === h) return state.reqs.items;
+  const out = await ask(extractPrompt(jd), { btn: els.rate, statusEl: els.scoreStatus, busyMsg: "Reading the posting's qualifications (one-time per job)…", validate: validReqs });
+  if (!out) return null;
+  state.reqs = { hash: h, items: out.requirements.map((r) => ({ requirement: r.requirement, type: r.type === "preferred" ? "preferred" : "required", keywords: r.keywords.map(String) })) };
+  return state.reqs.items;
+}
+
+function rescore() {
+  if (!state.reqs?.items) return;
+  state.score = analyze(state.reqs.items, state.doc);
+  renderScore();
+}
 
 els.rate.addEventListener("click", async () => {
   const jd = els.jd.value.trim();
   if (jd.length < 80) { setText(els.scoreStatus, "Paste the job description in the Job tab first.", "error"); return; }
-  const s = await ask(ratePrompt(jd), { btn: els.rate, statusEl: els.scoreStatus, busyMsg: "Scoring against the posting — usually 15–40 seconds…", validate: validScore });
-  if (!s) return;
-  state.score = s; state.scoreStale = false;
+  const reqs = await ensureRequirements(jd);
+  if (!reqs) return;
+  state.suggestions = null;
+  rescore(); persist();
+  const missing = state.score.items.filter((r) => r.type === "required" && !r.matched);
+  if (!missing.length) { setText(els.scoreStatus, "Every required qualification is evidenced."); return; }
+  const out = await ask(suggestPrompt(missing), { btn: els.rate, statusEl: els.scoreStatus, busyMsg: `Checking whether the ${missing.length} missing qualification${missing.length > 1 ? "s" : ""} can be evidenced truthfully…`, validate: validSugg });
+  if (!out) return;
+  state.suggestions = out.suggestions.filter((s) => s && typeof s.requirement === "string");
   renderScore(); persist();
 });
 
-function improvePrompt(jd) {
-  const sugg = (state.score?.suggestions || []).map((s, i) => `${i + 1}. ${s.where}: ${s.change}`).join("\n");
-  const gaps = (state.score?.gaps || []).map((g) => `- ${g}`).join("\n");
-  return `You are a professional resume writer for early-career candidates. Revise the candidate's current resume draft to address the reviewer feedback below, so it scores as high as possible for this job.
+els.improve.addEventListener("click", () => {
+  const usable = (state.suggestions || []).filter((s) => s.evidenced && s.bullet && s.org);
+  if (!usable.length) return;
+  let applied = 0;
+  for (const s of usable) {
+    const target = findEntry(s.org);
+    if (!target) continue;
+    const bullet = String(s.bullet).trim();
+    if (target.bullets.some((b) => b === bullet)) continue;
+    const cap = target.kind === "experience" ? 3 : 2;
+    if (target.bullets.length < cap) target.bullets.push(bullet);
+    else target.bullets[weakestIndex(target.bullets)] = bullet;
+    applied++;
+  }
+  state.suggestions = null;
+  renderEditor(); refreshPdf(); rescore(); persist();
+  setText(els.scoreStatus, applied ? `Inserted ${applied} bullet${applied > 1 ? "s" : ""}. Score recomputed.` : "Nothing to apply.");
+});
 
-Current draft (JSON):
-${JSON.stringify(currentResume(), null, 2)}
-
-The candidate's full base resume (additional true bullets you may draw on):
-${baseJSON()}
-
-Job Description:
-${jd.slice(0, 12000)}
-
-Reviewer gaps:
-${gaps || "(none)"}
-
-Reviewer suggestions to apply:
-${sugg || "(none)"}
-
-Reply with only a JSON object in this exact schema:
-${SCHEMA}
-
-${RULES}
-- Apply every suggestion that can be applied truthfully. Keep the candidate's own edits where they don't conflict with the feedback.
-- If a suggested order was given, use it: ${JSON.stringify(state.score?.suggestedOrder || [])}`;
+function findEntry(name) {
+  const n = String(name).trim().toLowerCase();
+  const e = state.doc.experience.find((x) => x.org.trim().toLowerCase() === n || n.includes(x.org.trim().toLowerCase()) || x.org.trim().toLowerCase().includes(n));
+  if (e) return { kind: "experience", bullets: e.bullets };
+  const p = state.doc.projects.find((x) => x.name.trim().toLowerCase() === n || n.includes(x.name.trim().toLowerCase()) || x.name.trim().toLowerCase().includes(n));
+  return p ? { kind: "projects", bullets: p.bullets } : null;
 }
 
-els.improve.addEventListener("click", async () => {
-  const jd = els.jd.value.trim();
-  const t = await ask(improvePrompt(jd), { btn: els.improve, statusEl: els.scoreStatus, busyMsg: "Applying the suggestions — usually 15–40 seconds…", validate: validTailored });
-  if (!t) return;
-  applyTailored(t, "Suggestions applied. Check the edits, then rate again.");
-  setText(els.scoreStatus, "Applied. Rate again to see the new score.");
-});
+// Weakest = fewest quality checks passed, then fewest required-keyword hits, then longest.
+function weakestIndex(bullets) {
+  const reqKeywords = (state.reqs?.items || []).filter((r) => r.type === "required").flatMap((r) => r.keywords || []);
+  const scored = bullets.map((b, i) => {
+    const q = bulletQuality(b); const toks = new Set(tokens(b));
+    const passes = [q.verb, q.number, q.length, q.strong].filter(Boolean).length;
+    const hits = reqKeywords.filter((k) => keywordHits(k, toks)).length;
+    return { i, passes, hits, len: b.length };
+  });
+  scored.sort((a, b) => a.passes - b.passes || a.hits - b.hits || b.len - a.len);
+  return scored[0].i;
+}
 
 function renderScore() {
   const s = state.score;
   if (!s) { els.scoreOut.innerHTML = ""; els.improve.hidden = true; return; }
-  const score = Math.max(0, Math.min(100, Math.round(s.score)));
-  const tone = score >= 80 ? "good" : score >= 60 ? "mid" : "low";
-  const bars = (s.breakdown || []).map((b) => `
-    <div class="bar-row">
-      <div class="bar-head"><span>${esc(b.area)}</span><span class="bar-num">${esc(Math.round(b.score))}</span></div>
-      <div class="bar"><div class="bar-fill ${Math.round(b.score) >= 80 ? "good" : Math.round(b.score) >= 60 ? "mid" : "low"}" style="width:${Math.max(2, Math.min(100, Math.round(b.score)))}%"></div></div>
-      <div class="bar-note">${esc(b.note || "")}</div>
-    </div>`).join("");
-  const currentOrder = state.doc.experience.map((e) => e.org);
-  const so = Array.isArray(s.suggestedOrder) && s.suggestedOrder.length ? s.suggestedOrder : null;
-  const orderDiffers = so && so.join("|") !== currentOrder.join("|");
-  const order = so
-    ? `<div class="sub-label">Suggested order</div><ol class="plain order">${so.map((o) => `<li>${esc(o)}</li>`).join("")}</ol>${orderDiffers ? `<button class="btn tiny" type="button" id="apply-order">Reorder to match</button>` : `<div class="hint">Already in this order.</div>`}`
-    : "";
-  const kw = (s.missingKeywords || []).length
-    ? `<div class="sub-label">Missing keywords</div><div class="chips">${s.missingKeywords.map((k) => `<span class="chip">${esc(k)}</span>`).join("")}</div>` : "";
-  const gaps = (s.gaps || []).length
-    ? `<div class="sub-label">What's holding it down</div><ul class="plain">${s.gaps.map((g) => `<li>${esc(g)}</li>`).join("")}</ul>` : "";
-  const sugg = (s.suggestions || []).length
-    ? `<div class="sub-label">Suggested edits</div><ol class="sugg">${s.suggestions.map((x) => `<li><b>${esc(x.where)}</b><div>${esc(x.change)}</div></li>`).join("")}</ol>` : "";
+  const tone = s.score >= 80 ? "good" : s.score >= 60 ? "mid" : "low";
+  const P = s.parts;
+  const formula = `<div class="formula">
+    <div class="formula-row"><span>Required qualifications</span><span>${P.required.weight} × ${P.required.value.toFixed(2)}</span><b>${P.required.points.toFixed(1)}</b></div>
+    ${P.preferred.weight ? `<div class="formula-row"><span>Preferred qualifications</span><span>${P.preferred.weight} × ${P.preferred.value.toFixed(2)}</span><b>${P.preferred.points.toFixed(1)}</b></div>` : ""}
+    <div class="formula-row"><span>Bullet quality</span><span>${P.quality.weight} × ${P.quality.value.toFixed(2)}</span><b>${P.quality.points.toFixed(1)}</b></div>
+    <div class="formula-row"><span>Ordering</span><span>${P.ordering.weight} × ${P.ordering.value.toFixed(2)}</span><b>${P.ordering.points.toFixed(1)}</b></div>
+    <div class="formula-row total"><span>Score</span><span></span><b>${s.score}</b></div>
+  </div>`;
+
+  const reqList = (type, title) => {
+    const rows = s.items.filter((r) => r.type === type);
+    if (!rows.length) return "";
+    return `<div class="sub-label">${title} (${rows.filter((r) => r.matched).length}/${rows.length})</div>
+    <ul class="checks">${rows.map((r) => `
+      <li class="${r.matched ? "ok" : "miss"}">
+        <span class="mark">${r.matched ? "✓" : "✗"}</span>
+        <span class="req"><span>${esc(r.requirement)}</span>
+          ${r.matched ? `<span class="ev">matched “${esc(r.matchedKeyword)}” in ${esc(r.matchedWhere)}</span>` : `<span class="ev">looked for: ${(r.keywords || []).map(esc).join(", ")}</span>`}
+        </span>
+      </li>`).join("")}</ul>`;
+  };
+
+  const failing = s.bullets.filter((b) => !b.pass);
+  const quality = `<div class="sub-label">Bullet quality (${s.bullets.length - failing.length}/${s.bullets.length} pass)</div>
+    ${failing.length ? `<ul class="checks">${failing.map((b) => `
+      <li class="miss"><span class="mark">✗</span><span class="req"><span>${esc(b.where)}</span>
+        <span class="ev">${[!b.verb && "no past-tense verb after the label", !b.number && "no number or %", !b.length && `${b.text.length} chars (max 200)`, !b.strong && "weak phrase"].filter(Boolean).join(" · ")}</span></span></li>`).join("")}</ul>`
+      : `<div class="hint">Every bullet starts with a verb, has a number, is under 200 characters, and avoids weak phrases.</div>`}`;
+
+  const ordering = `<div class="sub-label">Ordering</div><div class="hint">${esc(P.ordering.label)}${s.ordering < 1 && s.bestOrg ? ` <button class="btn tiny" type="button" id="apply-order">Move ${esc(s.bestOrg)} to top</button>` : ""}</div>`;
+
+  const sg = state.suggestions;
+  const usable = (sg || []).filter((x) => x.evidenced && x.bullet);
+  const sugg = sg ? `<div class="sub-label">Missing required qualifications</div><ul class="checks">${sg.map((x) => `
+      <li class="${x.evidenced ? "ok" : "miss"}"><span class="mark">${x.evidenced ? "+" : "—"}</span><span class="req"><span>${esc(x.requirement)}</span>
+        <span class="ev">${x.evidenced && x.bullet ? `add under ${esc(x.org)}: “${esc(x.bullet)}”` : "cannot be evidenced from your base resume without inventing something — leave it out"}</span></span></li>`).join("")}</ul>` : "";
+
   els.scoreOut.innerHTML = `
-    ${state.scoreStale ? `<div class="stale">Resume changed since this score — rate again for a fresh one.</div>` : ""}
-    <div class="score-card">
-      <div class="score-big ${tone}">${score}<span class="score-of">/100</span></div>
-      <div class="score-verdict">${esc(s.verdict || "")}</div>
-    </div>
-    ${bars}${order}${kw}${gaps}${sugg}`;
-  els.improve.hidden = !(s.suggestions || []).length;
+    <div class="score-card"><div class="score-big ${tone}">${s.score}<span class="score-of">/100</span></div><div class="score-verdict">Recomputed on every edit. Every point is traceable below.</div></div>
+    ${formula}${reqList("required", "Required qualifications")}${reqList("preferred", "Preferred qualifications")}${quality}${ordering}${sugg}`;
+  els.improve.hidden = !usable.length;
+  els.improve.textContent = usable.length ? `Insert ${usable.length} evidenced bullet${usable.length > 1 ? "s" : ""}` : "Apply suggestions";
   document.getElementById("apply-order")?.addEventListener("click", () => {
-    const byOrg = new Map(state.doc.experience.map((e) => [e.org.trim().toLowerCase(), e]));
-    const next = [];
-    for (const name of so) { const e = byOrg.get(String(name).trim().toLowerCase()); if (e) { next.push(e); byOrg.delete(e.org.trim().toLowerCase()); } }
-    next.push(...byOrg.values());
-    state.doc.experience = next;
-    markScoreStale(); renderEditor(); refreshPdf(); persist();
-    setText(els.scoreStatus, "Reordered. Rate again to confirm the score.");
+    const i = state.doc.experience.findIndex((e) => e.org === s.bestOrg);
+    if (i > 0) { const [e] = state.doc.experience.splice(i, 1); state.doc.experience.unshift(e); }
+    renderEditor(); refreshPdf(); rescore(); persist();
   });
 }
-function markScoreStale() {
-  if (state.score && !state.scoreStale) { state.scoreStale = true; renderScore(); }
-}
+
+// Live: every edit recomputes the deterministic score (no model call).
+function markScoreStale() { rescore(); }
 
 // ── Outreach ─────────────────────────────────────────────────────────────
 

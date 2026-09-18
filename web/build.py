@@ -79,6 +79,18 @@ ol.sugg b { font-weight: 600; }
 .msg { position: relative; font-size: 13px; line-height: 1.45; padding: 10px 12px; padding-right: 64px; background: var(--bg); border-radius: 6px; white-space: pre-wrap; }
 .msg .copy { position: absolute; top: 6px; right: 6px; }
 ol.order li { margin: 1px 0; }
+.formula { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.formula-row { display: grid; grid-template-columns: 1fr auto 44px; gap: 10px; }
+.formula-row span:nth-child(2) { color: var(--muted); }
+.formula-row b { text-align: right; }
+.formula-row.total { border-top: 1px solid var(--line); padding-top: 4px; margin-top: 2px; font-weight: 700; }
+ul.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+ul.checks li { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.35; }
+ul.checks .mark { flex: 0 0 18px; font-weight: 700; text-align: center; }
+ul.checks li.ok .mark { color: var(--good); }
+ul.checks li.miss .mark { color: var(--low); }
+ul.checks .req { display: flex; flex-direction: column; gap: 1px; }
+ul.checks .ev { font-size: 12px; color: var(--muted); }
 .entry { position: relative; }
 .mover { position: absolute; left: -30px; top: 1px; display: none; flex-direction: column; gap: 0; }
 .entry:hover .mover, .entry:focus-within .mover { display: flex; }
@@ -136,10 +148,10 @@ html = f"""<title>Resume Tailor</title>
     </div>
 
     <div class="tabpane" id="tab-score" hidden>
-      <p class="hint lead">Scores the resume exactly as it is now — your edits included — the way an applicant-tracking system and then a recruiter would read it against this posting. Aim for 85+ before you submit.</p>
+      <p class="hint lead">Deterministic: 50% required qualifications matched by keyword, 15% preferred, 20% bullet quality (verb · number · ≤200 chars · no weak phrases), 15% strongest experience first. Recomputed on every edit. Claude is only asked one thing: whether a missing qualification can be evidenced truthfully.</p>
       <div class="actions">
         <button id="rate" class="btn primary" type="button">Rate match</button>
-        <button id="improve" class="btn ghost" type="button" hidden>Apply suggestions</button>
+        <button id="improve" class="btn ghost" type="button" hidden>Insert evidenced bullets</button>
       </div>
       <p id="score-status" class="status" aria-live="polite"></p>
       <div id="score-out"></div>
