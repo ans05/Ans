@@ -108,6 +108,7 @@ ul.checks .ev { font-size: 12px; color: var(--muted); }
 data = (E / "resume-data.js").read_text()
 pdf = (E / "pdf.js").read_text()
 app = (S / "app.js").read_text()
+jspdf = (E / "lib" / "jspdf.umd.min.js").read_text()
 
 html = f"""<title>Resume Tailor</title>
 <style>
@@ -207,7 +208,9 @@ html = f"""<title>Resume Tailor</title>
   </form>
 </dialog>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script>
+{jspdf}
+</script>
 <script>
 {data}
 {pdf}

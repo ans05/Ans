@@ -592,7 +592,8 @@ function scheduleRefresh() { clearTimeout(refreshTimer); refreshTimer = setTimeo
 function buildPdf() { return renderResumePDF(currentResume()); }
 
 function refreshPdf() {
-  if (!state.doc || !window.jspdf) return;
+  if (!state.doc) return;
+  if (!window.jspdf) { els.fit.textContent = "PDF engine failed to load — reload the page"; els.fit.className = "fit warn"; return; }
   const { doc, overflow, scale } = buildPdf();
   if (state.pdfUrl) URL.revokeObjectURL(state.pdfUrl);
   state.pdfUrl = URL.createObjectURL(doc.output("blob"));
