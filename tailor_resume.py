@@ -50,7 +50,7 @@ BASE_EXPERIENCE = [
         "org": "Mercor",
         "role": "AI Growth Intern",
         "location": "San Francisco, CA",
-        "dates": "Jan 2025 – June 2025",
+        "dates": "Jan 2025 – Jun 2025",
         "bullets": [
             "Evaluated 500+ AI-generated responses using structured quality metrics to identify recurring patterns and improve model performance",
             "Contributed to a 15,000+ response training dataset by creating high-signal examples used to refine model behavior and evaluation quality",

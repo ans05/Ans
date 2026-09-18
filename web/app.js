@@ -24,7 +24,15 @@ let state = {
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const skillsToArray = (obj) => Array.isArray(obj) ? obj : Object.entries(obj).map(([cat, vals]) => ({ cat, vals }));
 const skillsToObject = (arr) => Object.fromEntries(arr.filter((s) => s.cat).map((s) => [s.cat, s.vals]));
-const currentResume = () => ({ ...state.doc, skills: skillsToObject(state.doc.skills) });
+const nonEmpty = (en) => ({ ...en, bullets: en.bullets.filter((b) => b && b.trim()), factIds: (en.factIds || []).filter((_, i) => en.bullets[i] && en.bullets[i].trim()) });
+const currentResume = () => ({ ...state.doc, experience: state.doc.experience.map(nonEmpty), projects: state.doc.projects.map(nonEmpty), skills: skillsToObject(state.doc.skills) });
+function pruneEmptyBullets() {
+  let changed = false;
+  for (const en of [...state.doc.experience, ...state.doc.projects]) {
+    for (let i = en.bullets.length - 1; i >= 0; i--) if (!en.bullets[i] || !en.bullets[i].trim()) { if (en.bullets.length > 1) { en.bullets.splice(i, 1); en.factIds?.splice(i, 1); changed = true; } }
+  }
+  return changed;
+}
 const bankEntry = (id) => BANK.entries.find((e) => e.id === id);
 const bankFact = (id) => { for (const e of BANK.entries) { const f = e.facts.find((f) => f.id === id); if (f) return { fact: f, entry: e }; } return null; };
 function hashStr(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return String(h >>> 0); }
@@ -504,6 +512,11 @@ const getPath = (obj, path) => path.split(".").reduce((o, k) => o[k], obj);
 const cleanText = (s) => s.replace(/\s+/g, " ").trim();
 const afterEdit = () => { scheduleRefresh(); rescore(); persist(); };
 
+els.paper.addEventListener("focusout", (e) => {
+  if (!e.target.closest?.(".txt")) return;
+  // Give a click on "+ Add bullet"/"×" time to land before pruning.
+  setTimeout(() => { if (document.activeElement?.closest?.("#paper .txt")) return; if (pruneEmptyBullets()) { renderEditor(); afterEdit(); } }, 150);
+});
 els.paper.addEventListener("input", (e) => {
   const el = e.target.closest("[data-path]");
   if (!el) return;
