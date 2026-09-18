@@ -86,9 +86,10 @@ const DEFAULT_RESUME = {
     },
   ],
   skills: {
-    Languages: "Python (pandas, NumPy), SQL, R, Swift, Rust",
-    "Data & ML": "ETL pipelines, data cleaning & validation, recommendation systems, model evaluation, error analysis, PostgreSQL",
-    "Analytics & Experimentation": "A/B testing, experimental design, hypothesis testing, regression analysis, statistical modeling, product analytics",
-    "Product & Tools": "product roadmapping, user research, competitive analysis, stakeholder management, Power BI, Git, Microsoft Azure",
+    Languages: "Python (pandas, NumPy), SQL, R, Swift",
+    "Data & ML": "ETL pipelines, data cleaning & validation, recommendation systems, model evaluation, error analysis, LLM evaluation, PostgreSQL",
+    "Analytics & Experimentation": "A/B testing, experimental design, hypothesis testing, regression analysis, qualitative coding, product analytics",
+    "Product & Tools": "product roadmapping, user research, competitive analysis, customer journey mapping, Git, Power BI, Microsoft Azure",
   },
+
 };

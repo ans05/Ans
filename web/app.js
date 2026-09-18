@@ -133,7 +133,8 @@ const RULES = `Rules:
 - ORDER experiences by relevance to this job, most relevant first — recruiters read top-down and rarely reach the bottom. Do the same for projects. Reorder freely; only include entries that exist in the base resume.
 - Keep every org/role/location/dates exactly as given (never change facts).
 - 3 bullets per experience, 2 per project, most relevant bullet first. Rewrite to match the job's language, but keep every metric and fact true. Never add tools, titles, or experience that are not in the base resume.
-- Lead the skills lines with the exact tools and methods this posting names, then the rest. You may rename the first skills category to fit the role (e.g. "Product & Analytics").`;
+- Lead the skills lines with the exact tools and methods this posting names, then the rest. You may rename the first skills category to fit the role (e.g. "Product & Analytics"). Never add a skill that is not in the base resume.
+- Every bullet: "Keyword: past-tense verb ..." with a number or % from the base resume, under 200 characters, no "responsible for" / "helped" / "worked on".`;
 
 function tailorPrompt(jd) {
   return `You are a professional resume writer for early-career (internship and new-grad) candidates who optimizes for applicant-tracking systems (ATS) first and human readers second. Tailor the candidate's resume to the job description below so it ranks as highly as possible in ATS keyword matching while staying completely truthful.
@@ -165,8 +166,10 @@ els.tailor.addEventListener("click", async () => {
   if (jd.length < 80) { setStatus("Paste the full job description first.", "error"); return; }
   const t = await ask(tailorPrompt(jd), { btn: els.tailor, statusEl: els.status, busyMsg: "Tailoring with Claude — usually 15–40 seconds…", validate: validTailored });
   if (!t) return;
-  applyTailored(t, "Done. Edit anything in the middle; the PDF on the right updates as you type. Then check the Score tab.");
-  setJobHidden(true);
+  applyTailored(t, "Tailored. Now optimizing the score…");
+  await optimizeForScore(jd);
+  setStatus("Done. Edit anything in the middle; the PDF and score update as you type.");
+  showTab("score");
 });
 
 // ── Score (deterministic; one narrow model call for suggestions) ─────────
@@ -310,8 +313,13 @@ els.rate.addEventListener("click", async () => {
 });
 
 els.improve.addEventListener("click", () => {
+  const applied = insertEvidenced();
+  setText(els.scoreStatus, applied ? `Inserted ${applied} bullet${applied > 1 ? "s" : ""}. Score recomputed.` : "Nothing to apply.");
+});
+
+function insertEvidenced() {
   const usable = (state.suggestions || []).filter((s) => s.evidenced && s.bullet && s.org);
-  if (!usable.length) return;
+  if (!usable.length) return 0;
   let applied = 0;
   for (const s of usable) {
     const target = findEntry(s.org);
@@ -325,8 +333,76 @@ els.improve.addEventListener("click", () => {
   }
   state.suggestions = null;
   renderEditor(); refreshPdf(); rescore(); persist();
-  setText(els.scoreStatus, applied ? `Inserted ${applied} bullet${applied > 1 ? "s" : ""}. Score recomputed.` : "Nothing to apply.");
-});
+  return applied;
+}
+
+// Put the experience with the most required-keyword hits first (stable for ties).
+function fixOrdering() {
+  if (!state.score) return false;
+  const hits = new Map(state.score.expScores.map((x) => [x.org, x.hits]));
+  const before = state.doc.experience.map((e) => e.org).join("|");
+  state.doc.experience.sort((a, b) => (hits.get(b.org) || 0) - (hits.get(a.org) || 0));
+  return state.doc.experience.map((e) => e.org).join("|") !== before;
+}
+
+function polishPrompt(failing) {
+  return `Rewrite each resume bullet below so it passes these checks, using ONLY facts already in the candidate's base resume (never invent a number, tool, or result): starts with "Keyword: " then a past-tense verb; contains a number or %; under 200 characters; no "responsible for", "helped", "worked on". Keep the meaning and the org. If a bullet cannot be given a truthful number, keep it numberless but fix everything else.
+
+Base resume (JSON):
+${baseJSON()}
+
+Bullets to rewrite:
+${failing.map((b, i) => `${i + 1}. [${b.where}] ${b.text}  — fails: ${[!b.verb && "verb", !b.number && "number", !b.length && "length", !b.strong && "weak phrase"].filter(Boolean).join(", ")}`).join("\n")}
+
+Reply with only JSON: {"rewrites": [{"where": "exactly as given in brackets", "bullet": "..."}]}`;
+}
+const validPolish = (o) => Array.isArray(o?.rewrites);
+
+function applyRewrites(rewrites) {
+  let n = 0;
+  for (const r of rewrites) {
+    const m = /^(.*), bullet (\d+)$/.exec(String(r.where || ""));
+    if (!m || !r.bullet) continue;
+    const entry = findEntry(m[1]); const idx = Number(m[2]) - 1;
+    if (!entry || !(idx in entry.bullets)) continue;
+    entry.bullets[idx] = String(r.bullet).trim(); n++;
+  }
+  return n;
+}
+
+// After tailoring: push the deterministic score as high as the truth allows.
+async function optimizeForScore(jd) {
+  const reqs = await ensureRequirements(jd);
+  if (!reqs) return;
+  rescore();
+  const start = state.score.score;
+  const steps = [];
+
+  if (fixOrdering()) { renderEditor(); rescore(); steps.push("reordered experiences"); }
+
+  const missing = state.score.items.filter((r) => r.type === "required" && !r.matched);
+  if (missing.length) {
+    const out = await ask(suggestPrompt(missing), { btn: els.tailor, statusEl: els.status, busyMsg: `Checking ${missing.length} unmatched requirement${missing.length > 1 ? "s" : ""} against your base resume…`, validate: validSugg });
+    if (out) {
+      state.suggestions = out.suggestions.filter((x) => x && typeof x.requirement === "string");
+      const n = insertEvidenced();
+      if (n) steps.push(`added ${n} evidenced bullet${n > 1 ? "s" : ""}`);
+      if (fixOrdering()) { renderEditor(); rescore(); }
+    }
+  }
+
+  const failing = state.score.bullets.filter((b) => !b.pass);
+  if (failing.length) {
+    const out = await ask(polishPrompt(failing), { btn: els.tailor, statusEl: els.status, busyMsg: `Polishing ${failing.length} bullet${failing.length > 1 ? "s" : ""} that fail the quality checks…`, validate: validPolish });
+    if (out) { const n = applyRewrites(out.rewrites); if (n) { renderEditor(); rescore(); steps.push(`polished ${n} bullet${n > 1 ? "s" : ""}`); } }
+  }
+
+  refreshPdf(); persist();
+  const sc = state.score.score;
+  const stillMissing = state.score.items.filter((r) => r.type === "required" && !r.matched);
+  const why = stillMissing.length ? ` ${stillMissing.length} required qualification${stillMissing.length > 1 ? "s" : ""} can't be evidenced truthfully — see the Score tab.` : "";
+  toast(`Score ${sc}/100${start !== sc ? ` (from ${start})` : ""}${steps.length ? ` — ${steps.join(", ")}.` : "."}${why}`, sc >= 90 ? "ok" : "");
+}
 
 function findEntry(name) {
   const n = String(name).trim().toLowerCase();
