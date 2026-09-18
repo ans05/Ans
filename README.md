@@ -23,7 +23,24 @@ No Python, no terminal. Click the icon on any job posting, get a tailored one-pa
 4. Click any bullet in the preview to edit it.
 5. Click **Download PDF**.
 
-The base resume lives in **Settings** as editable JSON. Add every true bullet you have; the model picks the best three per role for each job.
+The base résumé is derived from a **verified evidence bank** (`extension/resume-data.js`): every fact carries the metrics and tools it is allowed to contain, the competencies it supports, and the extrapolations that are prohibited. Tailoring can only select, shorten, reorder, and rephrase those facts; a fact guard replaces any rewrite that introduces a number, tool, or claim the bank does not verify.
+
+### Evidence Match Score
+
+The Score tab reports an **Evidence Match Score** — an internal estimate of how much of a posting's requirements your verified evidence covers. It is not a prediction of any employer's ATS ranking or interview decision.
+
+- One model call reads the posting and classifies each statement: required qualification, preferred qualification, responsibility, company language, logistics, or subjective trait. Only the first three are scored; the rest are shown but never counted.
+- Each scorable statement maps to capabilities from a closed vocabulary (`web/scoring.js`). Evidence rules need an action **and** an object in one résumé statement ("engineering" alone is not collaboration; "roadmap" alone is not a specification; "launched" alone is not stakeholder communication). Degree requirements are checked against Education, not bullets.
+- Statuses: `matched` (1.0), `partially_matched` (0.5), `missing` (0), `not_scorable` (excluded). Every number on the page — counts, score, checklist, missing list — comes from one evaluation result, so a missing item can never also show as matched.
+- Score = 50% required + 10% preferred + 20% responsibilities + 10% bullet quality + 10% evidence ordering. Bullet quality accepts a strong verb with either a metric or a concrete scope and outcome; numbers are not required.
+- Missing items are listed with a confirmation question; the tool never fills a gap by itself.
+
+### Tests
+
+```bash
+cd web && npm test          # builds, then unit tests (scoring, fact guard, outreach) + Playwright e2e on jobs/roblox.txt
+python3 web/validate_pdf.py web/tests/out/Aneesh_Srirambhatla_Roblox.pdf --expect-words web/tests/out/expected_words.txt --png page.png
+```
 
 ## Python script
 

@@ -94,6 +94,13 @@ ul.checks li { display: flex; gap: 8px; align-items: flex-start; font-size: 13px
 ul.checks .mark { flex: 0 0 18px; font-weight: 700; text-align: center; }
 ul.checks li.ok .mark { color: var(--good); }
 ul.checks li.miss .mark { color: var(--low); }
+ul.checks li.part .mark { color: var(--mid); }
+ul.checks li.na .mark { color: var(--muted); }
+.formula-row .ev { display: block; font-weight: 400; color: var(--muted); font-size: 11.5px; }
+.counter.over { color: var(--danger); font-weight: 700; }
+label.inline { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.target .field { margin: 2px 0; }
+.target input[type="text"] { padding: 5px 8px; font-size: 13px; }
 ul.checks .req { display: flex; flex-direction: column; gap: 1px; }
 ul.checks .ev { font-size: 12px; color: var(--muted); }
 .entry { position: relative; }
@@ -109,6 +116,8 @@ data = (E / "resume-data.js").read_text()
 pdf = (E / "pdf.js").read_text()
 app = (S / "app.js").read_text()
 jspdf = (E / "lib" / "jspdf.umd.min.js").read_text()
+scoring = (S / "scoring.js").read_text()
+fonts = (S / "fonts.js").read_text()
 
 html = f"""<title>Resume Tailor</title>
 <style>
@@ -155,10 +164,10 @@ html = f"""<title>Resume Tailor</title>
     </div>
 
     <div class="tabpane" id="tab-score" hidden>
-      <p class="hint lead">Deterministic: 50% required qualifications matched by keyword, 15% preferred, 20% bullet quality (verb · number · ≤200 chars · no weak phrases), 15% strongest experience first. Recomputed on every edit. Claude is only asked one thing: whether a missing qualification can be evidenced truthfully.</p>
+      <p class="hint lead"><b>Evidence Match Score</b> — an internal estimate of how much of the posting your verified résumé evidence covers: 50% required qualifications, 10% preferred, 20% responsibilities, 10% bullet quality, 10% evidence ordering. Matched = 1, partial = 0.5, missing = 0; subjective, logistics and company language are shown but never scored. Not a prediction of an employer's ATS or interview decision.</p>
       <div class="actions">
         <button id="rate" class="btn primary" type="button">Rate match</button>
-        <button id="improve" class="btn ghost" type="button" hidden>Insert evidenced bullets</button>
+        <button id="improve" class="btn ghost" type="button" hidden>Add verified facts from bank</button>
       </div>
       <p id="score-status" class="status" aria-live="polite"></p>
       <div id="score-out"></div>
@@ -179,7 +188,7 @@ html = f"""<title>Resume Tailor</title>
   <section class="panel editor-panel">
     <div class="panel-head">
       <span class="label">Edit <span class="hint">— click any text to change it · Enter adds a bullet · Backspace on an empty bullet removes it</span></span>
-      <span id="saved" class="hint"></span>
+      <span class="hint"><label class="inline"><input type="checkbox" id="projects-first"> Projects first</label> <span id="saved"></span></span>
     </div>
     <div id="paper" class="paper"></div>
   </section>
@@ -210,6 +219,12 @@ html = f"""<title>Resume Tailor</title>
 
 <script>
 {jspdf}
+</script>
+<script>
+{fonts}
+</script>
+<script>
+{scoring}
 </script>
 <script>
 {data}

@@ -1,7 +1,16 @@
-// Base resume. Every bullet here is a true fact; the model picks the best
-// three per role for each job and rewrites them to match its language.
-// Keep the pool larger than what fits on a page — more angles, more matches.
-const DEFAULT_RESUME = {
+// Verified evidence bank — the single source of truth for résumé facts.
+//
+// Every fact here has been confirmed by the candidate. The tailoring model may
+// select, shorten, reorder, and rephrase facts; it may NOT invent titles,
+// employers, dates, tools, metrics, audience sizes, stakeholders, experiments,
+// deliverables, or results. `metrics` and `tools` list what a rephrased bullet
+// is allowed to contain; anything else is rejected by the fact guard.
+// `tags` name the competencies each fact supports (closed vocabulary in
+// web/scoring.js CAPABILITIES). `needsConfirmation` lists claims that were
+// asked about and not confirmed; `prohibited` lists extrapolations to refuse.
+
+const EVIDENCE_BANK = {
+  version: 1,
   profile: {
     name: "Aneesh Srirambhatla",
     phone: "424-390-9605",
@@ -12,76 +21,115 @@ const DEFAULT_RESUME = {
     school: "University of California, Berkeley",
     grad: "Expected Graduation: Dec 2027",
     degree: "B.A. Data Science | Certificate in Entrepreneurship & Technology",
+    field: "Data Science",
     coursework:
       "Data Structures & Algorithms, Foundations of Data Science, Statistical Analysis, Computational Structures in Data Science, Python Programming",
   },
-  experience: [
+  entries: [
     {
+      id: "siemens",
+      kind: "experience",
       org: "Siemens Healthineers",
       role: "Product & Strategy Intern",
       location: "Berkeley, CA",
       dates: "Jan 2026 – May 2026",
-      bullets: [
-        "Product roadmap: built a prioritized 90-day activation strategy for the theranostics business from customer-journey, workflow, and adoption-barrier research across 8+ organizations",
-        "Competitive analysis: mapped patient advocacy networks and competitive positioning across 8+ organizations, surfacing strategic growth opportunities for the theranostics business",
-        "Market research: distilled workflow and adoption-barrier findings from 8+ organizations into ranked partnership priorities spanning multiple product lines",
-        "Stakeholder alignment: developed data-informed patient engagement strategies across 3 functions — clinical, marketing, and product — to improve treatment access and navigation",
-        "Customer journey mapping: documented patient journeys across 8+ organizations to pinpoint the friction points blocking theranostics adoption",
+      verifiedMetrics: ["8+", "90-day", "3"],
+      verifiedTools: [],
+      tags: ["product_strategy_roadmap", "market_research", "competitive_analysis", "cross_functional_collaboration", "user_research", "stakeholder_communication"],
+      needsConfirmation: [
+        "Who received the final activation strategy (director-level presentation not confirmed)",
+        "Whether provider journeys were researched in addition to patient journeys",
+      ],
+      prohibited: ["presented to leadership/directors", "provider journeys", "revenue or adoption figures", "team size"],
+      facts: [
+        { id: "siemens.roadmap", text: "Built a prioritized 90-day activation roadmap for the theranostics business from customer-journey, workflow, and adoption-barrier research across 8+ organizations", metrics: ["90-day", "8+"], tools: [], tags: ["product_strategy_roadmap", "user_research", "market_research"] },
+        { id: "siemens.competitive", text: "Mapped patient advocacy networks and competitive positioning across 8+ organizations, surfacing strategic growth opportunities for the theranostics business", metrics: ["8+"], tools: [], tags: ["competitive_analysis", "market_research"] },
+        { id: "siemens.partnerships", text: "Distilled workflow and adoption-barrier findings from 8+ organizations into ranked partnership priorities spanning multiple product lines", metrics: ["8+"], tools: [], tags: ["market_research", "product_strategy_roadmap"] },
+        { id: "siemens.crossfn", text: "Developed data-informed patient engagement strategies with clinical, marketing, and product teams to improve treatment access and navigation", metrics: ["3"], tools: [], tags: ["cross_functional_collaboration", "stakeholder_communication", "product_strategy_roadmap"] },
+        { id: "siemens.journey", text: "Documented patient journeys across 8+ organizations to pinpoint the friction points blocking theranostics adoption", metrics: ["8+"], tools: [], tags: ["user_research"] },
       ],
     },
     {
+      id: "mercor",
+      kind: "experience",
       org: "Mercor",
       role: "AI Growth Intern",
       location: "San Francisco, CA",
       dates: "Jan 2025 – June 2025",
-      bullets: [
-        "Model evaluation: scored 500+ LLM responses against structured quality metrics, isolating recurring failure patterns that fed directly into model improvements",
-        "Training data: authored high-signal examples for a 15,000+ response training dataset used to refine model behavior and raise evaluation quality",
-        "Process optimization: redesigned the evaluation workflow for 500+ responses after a performance analysis, removing repeated manual steps",
-        "Quality rubrics: applied structured, multi-criteria scoring rubrics to 500+ LLM outputs to grade accuracy, helpfulness, and safety",
-        "Error analysis: categorized failure modes across 500+ responses into a taxonomy that became concrete guidance for model refinement",
+      verifiedMetrics: ["500+", "15,000+"],
+      verifiedTools: ["LLM"],
+      tags: ["ml_evaluation", "data_analysis", "process_improvement"],
+      needsConfirmation: ["What the earlier '15% workflow improvement' measured", "Whether multiple reviewers were calibrated for consistency"],
+      prohibited: ["15% throughput/efficiency figure", "inter-rater consistency work", "model accuracy numbers"],
+      facts: [
+        { id: "mercor.eval", text: "Scored 500+ LLM responses against structured quality metrics, isolating recurring failure patterns that fed directly into model improvements", metrics: ["500+"], tools: ["LLM"], tags: ["ml_evaluation", "data_analysis"] },
+        { id: "mercor.data", text: "Authored high-signal examples for a 15,000+ response training dataset used to refine model behavior and raise evaluation quality", metrics: ["15,000+"], tools: [], tags: ["ml_evaluation"] },
+        { id: "mercor.process", text: "Redesigned the evaluation workflow for 500+ responses after a performance analysis, removing repeated manual steps", metrics: ["500+"], tools: [], tags: ["process_improvement", "data_analysis"] },
+        { id: "mercor.rubrics", text: "Applied structured, multi-criteria scoring rubrics to 500+ LLM outputs to grade accuracy, helpfulness, and safety", metrics: ["500+"], tools: ["LLM"], tags: ["ml_evaluation"] },
+        { id: "mercor.errors", text: "Categorized failure modes across 500+ responses into a taxonomy that became concrete guidance for model refinement", metrics: ["500+"], tools: [], tags: ["ml_evaluation", "data_analysis"] },
       ],
     },
     {
+      id: "haas",
+      kind: "experience",
       org: "Haas School of Business Lab",
       role: "Undergraduate Research Assistant (URAP) — Social Psychology & Business Lab",
       location: "Berkeley, CA",
       dates: "Feb 2025 – Aug 2026",
-      bullets: [
-        "Hypothesis testing: structured open-ended behavioral research questions into testable hypotheses and analyzed 1,000+ participant responses in R using regression",
-        "Behavioral research: examined 10+ factors that influence leadership and group behavior under Professors Cameron Anderson and Angus Hildreth",
-        "Experimental design: co-designed and ran pilot behavioral studies in Berkeley's BLab research network, testing 10+ leadership and group-behavior factors",
-        "Statistical analysis: fit regression models to 1,000+ participant responses in R, producing behavioral insights that shaped follow-on study design",
-        "Qualitative coding: coded 481 open-ended participant responses into a structured codebook, converting free text into analyzable categorical data",
-        "Independent research: initiated 2 self-directed projects — a 20+ data-point analysis of leadership-seeking strategies in political debates, and a study of AI tools' effect on research productivity",
-        "Research communication: presented experimental results and statistical analyses in written reports and slide decks to 2 faculty PIs and interdisciplinary teams",
+      verifiedMetrics: ["1,000+", "481", "10+", "20+", "2", "5-10"],
+      verifiedTools: ["R"],
+      tags: ["statistics", "experimentation", "user_research", "data_analysis", "stakeholder_communication", "r_language", "qualitative_research"],
+      needsConfirmation: ["Total number of studies designed and total participants across them"],
+      prohibited: ["sole ownership of study design (co-designed only)", "publication claims"],
+      facts: [
+        { id: "haas.hypotheses", text: "Structured open-ended behavioral research questions into testable hypotheses and analyzed 1,000+ participant responses in R using regression", metrics: ["1,000+"], tools: ["R"], tags: ["statistics", "data_analysis", "experimentation", "r_language"] },
+        { id: "haas.factors", text: "Examined 10+ factors that influence leadership and group behavior under Professors Cameron Anderson and Angus Hildreth", metrics: ["10+"], tools: [], tags: ["user_research", "statistics"] },
+        { id: "haas.pilots", text: "Co-designed and ran pilot behavioral studies in Berkeley's BLab research network, testing 10+ leadership and group-behavior factors", metrics: ["10+"], tools: [], tags: ["experimentation", "user_research"] },
+        { id: "haas.regression", text: "Fit regression models to 1,000+ participant responses in R, producing behavioral insights that shaped follow-on study design", metrics: ["1,000+"], tools: ["R"], tags: ["statistics", "data_analysis", "r_language"] },
+        { id: "haas.coding", text: "Coded 481 open-ended participant responses into a structured codebook, converting free text into analyzable categorical data", metrics: ["481"], tools: [], tags: ["qualitative_research", "user_research", "data_analysis"] },
+        { id: "haas.independent", text: "Initiated 2 self-directed projects — a 20+ data-point analysis of leadership-seeking strategies in political debates, and a study of AI tools' effect on research productivity", metrics: ["2", "20+"], tools: [], tags: ["initiative", "data_analysis"] },
+        { id: "haas.comms", text: "Presented experimental results and statistical analyses in written reports and slide decks to 2 faculty PIs and interdisciplinary teams", metrics: ["2"], tools: [], tags: ["stakeholder_communication", "written_communication", "cross_functional_collaboration"] },
       ],
     },
     {
+      id: "flourish",
+      kind: "experience",
       org: "FlourishAI (Berkeley SkyDeck)",
       role: "Software Engineer Intern",
       location: "Berkeley, CA",
       dates: "Dec 2024 – Aug 2025",
-      bullets: [
-        "ETL pipeline: engineered a Python and SQL pipeline to ingest, clean, and validate data from 100+ research sources, improving recommendation accuracy by 15%",
-        "Recommendation system: built and deployed a personalized nutrition recommendation platform in Python and SQL, increasing user engagement by 25%",
-        "Model evaluation: benchmarked recommendations against expert-labeled references and used error analysis to drive a 15% accuracy gain",
-        "User research: folded feedback from 10+ SkyDeck startup seminars into agile sprints, keeping prototypes aligned with user needs and business strategy",
-        "Data engineering: built automated data pipelines supporting 10,000+ recommendation predictions, making product data reproducible and scalable",
+      verifiedMetrics: ["100+", "15%", "25%", "10+", "10,000+"],
+      verifiedTools: ["Python", "SQL"],
+      tags: ["data_engineering", "sql", "python", "ml_evaluation", "user_research", "product_launch", "recommendation_systems"],
+      needsConfirmation: ["Whether ingestion replaced a manual process", "How the 25% engagement metric was defined and who instrumented it"],
+      prohibited: ["'replaced manual curation'", "instrumented engagement tracking", "defining engagement as retention/sessions/time"],
+      facts: [
+        { id: "flourish.etl", text: "Engineered a Python and SQL ETL pipeline to ingest, clean, and validate data from 100+ research sources, improving recommendation accuracy by 15%", metrics: ["100+", "15%"], tools: ["Python", "SQL", "ETL"], tags: ["data_engineering", "sql", "python"] },
+        { id: "flourish.recsys", text: "Built and deployed a personalized nutrition recommendation platform in Python and SQL, increasing user engagement by 25%", metrics: ["25%"], tools: ["Python", "SQL"], tags: ["product_launch", "recommendation_systems", "python", "sql"] },
+        { id: "flourish.eval", text: "Benchmarked recommendations against expert-labeled references and used error analysis to drive a 15% accuracy gain", metrics: ["15%"], tools: [], tags: ["ml_evaluation", "data_analysis"] },
+        { id: "flourish.feedback", text: "Folded feedback from 10+ SkyDeck startup seminars into agile sprints, keeping prototypes aligned with user needs and business strategy", metrics: ["10+"], tools: [], tags: ["user_research", "product_iteration"] },
+        { id: "flourish.pipelines", text: "Built automated data pipelines supporting 10,000+ recommendation predictions, making product data reproducible and scalable", metrics: ["10,000+"], tools: [], tags: ["data_engineering", "scale"] },
       ],
     },
-  ],
-  projects: [
     {
-      name: "Project GoalKeeper",
-      tech: "Founder & Product Lead | iOS, Swift, A/B Testing, Product Analytics",
+      id: "goalkeeper",
+      kind: "project",
+      org: "Project GoalKeeper",
+      role: "Founder & Product Lead",
+      tech: "iOS, Swift, A/B Testing, Product Analytics",
+      location: "Los Angeles, CA",
       dates: "May 2023 – Aug 2024",
-      bullets: [
-        "A/B tests: designed and analyzed experiments for an iOS app used by 100+ athletes, translating results into feature decisions that increased average session duration by 30%",
-        "Product launch: built and shipped an iOS app from idea to launch that applies sports psychology techniques to athletic performance for 100+ athletes",
-        "Partnership: led product strategy and a partnership with the National Alliance of Mental Health (NAMI), driving adoption to 100+ athletes and iterating on community feedback",
-        "Product analytics: defined engagement metrics and used them to prioritize features, growing average session duration 30%",
-        "Product ownership: owned the full development cycle — user research, roadmap, build, launch, and iteration — as founder of a 100+ user product",
+      verifiedMetrics: ["100+", "30%"],
+      verifiedTools: ["iOS", "Swift"],
+      tags: ["product_ownership", "experimentation", "product_launch", "product_analytics", "user_research", "product_strategy_roadmap", "partnership", "mobile"],
+      needsConfirmation: ["App Store vs TestFlight distribution and download count", "Number and duration of A/B tests"],
+      prohibited: ["App Store release", "download counts", "number of A/B tests", "revenue"],
+      facts: [
+        { id: "gk.abtests", text: "Designed and analyzed A/B tests for an iOS app used by 100+ athletes, translating results into feature decisions that increased average session duration by 30%", metrics: ["100+", "30%"], tools: ["iOS"], tags: ["experimentation", "product_analytics", "product_decisions"] },
+        { id: "gk.launch", text: "Built and shipped an iOS app from idea to launch that applies sports psychology techniques to athletic performance for 100+ athletes", metrics: ["100+"], tools: ["iOS", "Swift"], tags: ["product_launch", "product_ownership", "mobile"] },
+        { id: "gk.nami", text: "Led product strategy and a partnership with the National Alliance of Mental Health (NAMI), driving adoption to 100+ athletes and iterating on community feedback", metrics: ["100+"], tools: [], tags: ["product_strategy_roadmap", "partnership", "user_research", "product_iteration"] },
+        { id: "gk.metrics", text: "Defined engagement metrics and used them to prioritize features, growing average session duration 30%", metrics: ["30%"], tools: [], tags: ["product_analytics", "product_decisions", "product_strategy_roadmap"] },
+        { id: "gk.ownership", text: "Owned the full development cycle — user research, roadmap, build, launch, and iteration — as founder of a 100+ user product", metrics: ["100+"], tools: [], tags: ["product_ownership", "product_strategy_roadmap", "user_research", "product_launch"] },
       ],
     },
   ],
@@ -91,5 +139,23 @@ const DEFAULT_RESUME = {
     "Analytics & Experimentation": "A/B testing, experimental design, hypothesis testing, regression analysis, qualitative coding, product analytics",
     "Product & Tools": "product roadmapping, user research, competitive analysis, customer journey mapping, Git, Power BI, Microsoft Azure",
   },
-
+  // Skills the candidate listed on the original résumé but that no bullet evidences.
+  unevidencedSkills: ["Power BI", "Microsoft Azure", "Git", "PostgreSQL", "pandas", "NumPy"],
 };
+
+// The rendered base résumé, derived from the bank so the two can never disagree.
+function resumeFromBank(bank) {
+  const exp = bank.entries.filter((e) => e.kind === "experience");
+  const proj = bank.entries.filter((e) => e.kind === "project");
+  return {
+    profile: { ...bank.profile },
+    education: { school: bank.education.school, grad: bank.education.grad, degree: bank.education.degree, coursework: bank.education.coursework },
+    experience: exp.map((e) => ({ id: e.id, org: e.org, role: e.role, location: e.location, dates: e.dates, bullets: e.facts.map((f) => f.text), factIds: e.facts.map((f) => f.id) })),
+    projects: proj.map((p) => ({ id: p.id, name: p.org, tech: `${p.role} | ${p.tech}`, dates: p.dates, bullets: p.facts.map((f) => f.text), factIds: p.facts.map((f) => f.id) })),
+    skills: { ...bank.skills },
+  };
+}
+
+const DEFAULT_RESUME = resumeFromBank(EVIDENCE_BANK);
+
+if (typeof module !== "undefined") module.exports = { EVIDENCE_BANK, DEFAULT_RESUME, resumeFromBank };
