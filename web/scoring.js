@@ -379,9 +379,23 @@ function rankEntries(doc, capIds, roleType = "general") {
   }).sort((a, b) => b.score - a.score);
 }
 
-// Order entries by the track's fixed order; unknown ids keep their relative position at the end.
-function orderForTrack(doc, track) {
+// Order entries by the track's fixed order. That table only knows the built-in example's entry
+// ids, so a different résumé (a custom evidence bank) falls back to ranking every entry by how
+// well it evidences the posting's own capabilities — still ordered, just not from a lookup table.
+function orderForTrack(doc, track, capIds) {
   const order = TRACK_ORDER[track] || [];
+  const allIds = [...(doc.experience || []), ...(doc.projects || [])].map((e) => e.id);
+  const known = allIds.some((id) => order.includes(id));
+  if (!known && capIds && capIds.length) {
+    const ranked = rankEntries(doc, capIds, track);
+    const rank = new Map(ranked.map((r, i) => [r.id, i]));
+    const pos = (id) => rank.get(id) ?? 99;
+    const experience = [...(doc.experience || [])].sort((a, b) => pos(a.id) - pos(b.id));
+    const projects = [...(doc.projects || [])].sort((a, b) => pos(a.id) - pos(b.id));
+    const top = ranked[0];
+    const sectionOrder = top && projects.some((p) => p.id === top.id) ? ["projects", "experience"] : ["experience", "projects"];
+    return { experience, projects, sectionOrder, fallback: true };
+  }
   const pos = (id) => { const i = order.indexOf(id); return i < 0 ? 99 : i; };
   const experience = [...(doc.experience || [])].sort((a, b) => pos(a.id) - pos(b.id));
   const projects = [...(doc.projects || [])].sort((a, b) => pos(a.id) - pos(b.id));
@@ -555,7 +569,7 @@ function evaluate(extracted, doc, opts = {}) {
   const strength = Math.max(0, (0.6 * matchStrength + 0.4 * specificity) - 0.1 * unsupported);
 
   // Relevance & ordering: track order respected (or chronology when relevance ordering is off), strongest evidence early.
-  const expectedOrder = orderForTrack(doc, track);
+  const expectedOrder = orderForTrack(doc, track, [...new Set(items.filter((i) => i.capability).map((i) => i.capability))]);
   const actualExp = (doc.experience || []).map((e) => e.id);
   const expectedExp = expectedOrder.experience.map((e) => e.id);
   const orderMatches = JSON.stringify(actualExp) === JSON.stringify(expectedExp);

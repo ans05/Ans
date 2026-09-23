@@ -112,6 +112,9 @@ ul.checklist li.warn { color: var(--muted); }
 label.inline { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .target .field { margin: 2px 0; }
 .target input[type="text"] { padding: 5px 8px; font-size: 13px; }
+.settings-form #import-text { min-height: 90px; }
+.settings-form .actions #import-status { flex: 1; min-width: 0; }
+.settings-form code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92em; background: var(--bg); padding: 1px 4px; border-radius: 4px; }
 ul.checks .req { display: flex; flex-direction: column; gap: 1px; }
 ul.checks .ev { font-size: 12px; color: var(--muted); }
 .entry { position: relative; }
@@ -226,14 +229,25 @@ html = f"""<title>Resume Tailor</title>
 
 <dialog id="settings">
   <form method="dialog" class="settings-form">
-    <h2>Base resume</h2>
+    <h2>Whose résumé is this?</h2>
+    <p class="hint lead">Everything — tailoring, scoring, skills — is generated only from the verified facts below. Nothing outside this bank is ever added to a résumé, so replace it to use this tool for someone else.</p>
+
+    <label class="field">
+      <span class="label">Import a résumé <span class="hint">— paste résumé text, Claude structures it into verified facts below for you to review</span></span>
+      <textarea id="import-text" rows="6" placeholder="Paste a résumé (yours, or a friend's, with their permission) — plain text is fine."></textarea>
+      <div class="actions">
+        <button id="import-build" class="btn primary" type="button">Build evidence bank from this text</button>
+        <span id="import-status" class="status"></span>
+      </div>
+    </label>
+
     <label class="field grow">
-      <span class="label">Base resume (JSON)</span>
+      <span class="label">Evidence bank (JSON) <span class="hint">— the source of truth; edit directly if you prefer</span></span>
       <textarea id="base-resume" spellcheck="false"></textarea>
-      <span class="hint">Add every true bullet you have — more than fit on a page is fine. Claude picks the best three per role for each job. Saved in this browser only. If you edit it, your version is kept over future built-in updates until you Reset to default.</span>
+      <span class="hint">Every fact needs <code>text</code>, and may list <code>metrics</code>/<code>tools</code> it's allowed to mention and <code>tags</code> naming the capabilities it evidences (see the built-in example). Add more true facts than fit on a page — the model picks the strongest per role. Saved in this browser only.</span>
     </label>
     <div class="actions">
-      <button id="reset-resume" class="btn ghost" type="button">Reset to default</button>
+      <button id="reset-resume" class="btn ghost" type="button">Reset to built-in example (Aneesh's résumé)</button>
       <span class="spacer"></span>
       <button class="btn ghost" type="button" id="cancel-settings">Cancel</button>
       <button class="btn primary" type="button" id="save-settings">Save</button>

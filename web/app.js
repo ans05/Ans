@@ -11,11 +11,15 @@ const els = {
   outreach: $("outreach"), outreachStatus: $("outreach-status"), outreachOut: $("outreach-out"),
   trackDetected: $("track-detected"), trackSelect: $("track-select"), relevanceOrder: $("relevance-order"),
   checks: $("checks"), verdict: $("verdict"),
+  importText: $("import-text"), importBuild: $("import-build"), importStatus: $("import-status"),
 };
 const S = window.Scoring;
-const BANK = EVIDENCE_BANK;
 
+// state.bank is the active evidence bank — the built-in example by default, or whoever the
+// viewer imported in Settings. Every tailoring, scoring, and skills call reads from it, so
+// swapping it swaps whose résumé the whole tool produces.
 let state = {
+  bank: EVIDENCE_BANK, bankCustomized: false,
   base: DEFAULT_RESUME, doc: null, claudeVersion: null, pdfUrl: null,
   sample: undefined, downloads: undefined, ctl: null,
   reqs: null,          // { key, items: [{statement, category, capabilities, keywords}] }
@@ -39,10 +43,10 @@ function pruneEmptyBullets() {
   }
   return changed;
 }
-const bankEntry = (id) => BANK.entries.find((e) => e.id === id);
-const bankFact = (id) => { for (const e of BANK.entries) { const f = e.facts.find((f) => f.id === id); if (f) return { fact: f, entry: e }; } return null; };
+const bankEntry = (id) => state.bank.entries.find((e) => e.id === id);
+const bankFact = (id) => { for (const e of state.bank.entries) { const f = e.facts.find((f) => f.id === id); if (f) return { fact: f, entry: e }; } return null; };
 function hashStr(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return String(h >>> 0); }
-const cacheKey = (jd) => `${hashStr(jd.trim())}|${S.SCORING_VERSION}|bank${BANK.version}`;
+const cacheKey = (jd) => `${hashStr(jd.trim())}|${S.SCORING_VERSION}|bank${hashStr(JSON.stringify(state.bank))}`;
 
 // ── Storage ──────────────────────────────────────────────────────────────
 
@@ -52,7 +56,9 @@ const store = {
 };
 
 function load() {
-  state.base = store.get("baseCustomized") ? (store.get("baseResume") || DEFAULT_RESUME) : DEFAULT_RESUME;
+  state.bankCustomized = !!store.get("bankCustomized");
+  state.bank = state.bankCustomized ? (store.get("customBank") || EVIDENCE_BANK) : EVIDENCE_BANK;
+  state.base = resumeFromBank(state.bank);
   if (store.get("jobHidden")) setJobHidden(true);
   const last = store.get("lastResult");
   if (last) {
@@ -133,7 +139,7 @@ function hideClaudeButtons() { for (const b of [els.tailor, els.rate, els.outrea
 // ── Tailoring (select verified facts; the fact guard rejects anything new) ─
 
 function bankForPrompt() {
-  return BANK.entries.map((e) => ({
+  return state.bank.entries.map((e) => ({
     id: e.id, kind: e.kind, org: e.org, role: e.role,
     facts: e.facts.map((f) => ({ id: f.id, text: f.text, tags: f.tags })),
   }));
@@ -149,7 +155,7 @@ Verified evidence bank (each fact has an id):
 ${JSON.stringify(bankForPrompt(), null, 1)}
 
 Skills the candidate may list (choose and reorder from these only):
-${JSON.stringify(BANK.skills)}
+${JSON.stringify(state.bank.skills)}
 
 Job description:
 ${jd.slice(0, 12000)}
@@ -178,7 +184,7 @@ function docFromSelection(sel) {
   const guardNotes = [];
   const build = (kind) => {
     const chosen = (kind === "experience" ? sel.experience : sel.projects) || [];
-    const entries = BANK.entries.filter((e) => e.kind === kind);
+    const entries = state.bank.entries.filter((e) => e.kind === kind);
     return entries.map((e) => {
       const pick = chosen.find((c) => c.id === e.id);
       let bullets = [];
@@ -198,7 +204,7 @@ function docFromSelection(sel) {
       const cap = kind === "experience" ? [4, 3, 3, 2, 2][Math.min(rank, 4)] : 3;
       const caps = scoredCapabilityIds();
       let entry = { org: e.org, bullets: bullets.map((b) => b.text), factIds: bullets.map((b) => b.factId) };
-      const dd = S.dedupeSelection(entry, BANK);
+      const dd = S.dedupeSelection(entry, state.bank);
       if (dd.dropped.length) guardNotes.push(`${e.org}: dropped ${dd.dropped.length} duplicate bullet${dd.dropped.length > 1 ? "s" : ""} (${dd.dropped.map((d) => d.reason).join("; ")})`);
       entry = dd.entry;
       if (entry.bullets.length < 2) {
@@ -213,9 +219,9 @@ function docFromSelection(sel) {
     });
   };
   // Skills: verified skills only, ordered for the track and the posting; anything the posting names that the bank cannot back is reported.
-  const sk = S.selectSkills(BANK, effectiveTrack(), els.jd.value);
+  const sk = S.selectSkills(state.bank, effectiveTrack(), els.jd.value);
   if (sk.unsupported.length) guardNotes.push(`posting names ${sk.unsupported.join(", ")} — not verified, not listed`);
-  const doc = { profile: clone(BANK.profile), education: clone(state.base.education), experience: build("experience"), projects: build("project"), skills: sk.skills.length ? sk.skills : skillsToArray(BANK.skills), sectionOrder: ["experience", "projects"] };
+  const doc = { profile: clone(state.bank.profile), education: clone(state.base.education), experience: build("experience"), projects: build("project"), skills: sk.skills.length ? sk.skills : skillsToArray(state.bank.skills), sectionOrder: ["experience", "projects"] };
   return { doc, guardNotes };
 }
 
@@ -223,7 +229,7 @@ function docFromSelection(sel) {
 function applyRanking(doc) {
   const before = JSON.stringify([doc.experience.map((e) => e.id), doc.sectionOrder]);
   if (state.relevanceOrdering) {
-    const o = S.orderForTrack(doc, effectiveTrack());
+    const o = S.orderForTrack(doc, effectiveTrack(), scoredCapabilityIds());
     doc.experience = o.experience; doc.projects = o.projects; doc.sectionOrder = o.sectionOrder;
   } else {
     const end = (e) => { const m = /(\w{3})\w*\.?\s+(\d{4})\s*$/.exec(e.dates || ""); const mo = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 }; return /present/i.test(e.dates || "") ? 999912 : m ? Number(m[2]) * 100 + (mo[m[1].toLowerCase()] || 0) : 0; };
@@ -302,7 +308,7 @@ async function ensureRequirements(jd) {
 
 // Recomputed from the current document on every edit; no model call.
 function runChecks() {
-  state.qc = S.qualityControl(currentResume(), { jd: els.jd.value, bank: BANK, pdf: state.pdfInfo, relevanceOrdering: state.relevanceOrdering });
+  state.qc = S.qualityControl(currentResume(), { jd: els.jd.value, bank: state.bank, pdf: state.pdfInfo, relevanceOrdering: state.relevanceOrdering });
   renderChecks();
   return state.qc;
 }
@@ -310,7 +316,7 @@ function rescore() {
   const qc = runChecks();
   if (!state.reqs?.items || !state.doc) { state.result = null; renderScore(); return; }
   const unsupported = qc.issues.filter((i) => i.severity === "block" && /not verified|prohibited/.test(i.message)).length;
-  state.result = S.evaluate(state.reqs.items, currentResume(), { track: effectiveTrack(), jd: els.jd.value, bank: BANK, relevanceOrdering: state.relevanceOrdering, unsupportedClaims: unsupported });
+  state.result = S.evaluate(state.reqs.items, currentResume(), { track: effectiveTrack(), jd: els.jd.value, bank: state.bank, relevanceOrdering: state.relevanceOrdering, unsupportedClaims: unsupported });
   renderChecks();   // verdict badge depends on the fresh result
   renderScore();
 }
@@ -337,7 +343,7 @@ els.rate.addEventListener("click", async () => {
 // Add bank facts that evidence a missing capability (never invents; only surfaces verified facts not currently on the page).
 function bankFactsFor(capId) {
   const out = [];
-  for (const e of BANK.entries) for (const f of e.facts) {
+  for (const e of state.bank.entries) for (const f of e.facts) {
     const units = S.resumeUnits({ experience: [{ org: e.org, bullets: [f.text] }], projects: [], education: {}, skills: {} });
     const r = S.evaluateCapability(capId, units);
     if (r.status === "matched") out.push({ entry: e, fact: f });
@@ -401,7 +407,7 @@ function renderScore() {
   const missingList = r.missing.length ? `
     <div class="sub-label">Missing qualifications (${r.missing.length})</div>
     <ul class="checks">${r.missing.map((i) => `<li class="miss"><span class="mark">${i.verdict?.startsWith("Not") ? "✗" : "?"}</span><span class="req"><span>${esc(i.label || i.statement)}</span><span class="ev"><b>${esc(i.verdict || "Missing")}</b> — ${esc(i.why || "")}</span></span></li>`).join("")}</ul>` : "";
-  const questions = S.suggestedQuestions(r, BANK);
+  const questions = S.suggestedQuestions(r, state.bank);
   const qList = questions.length ? `<div class="sub-label">Questions you can answer to strengthen this résumé (${questions.length})</div><ol class="sugg">${questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>` : "";
   const v = S.applicationVerdict(r, state.qc);
 
@@ -435,9 +441,13 @@ const AUDIENCES = [
 ];
 
 function outreachPrompt(company, jd) {
-  const p = BANK.profile;
+  const p = state.bank.profile;
+  const edu = state.bank.education || {};
   const resume = currentResume();
-  return `Write LinkedIn outreach for a UC Berkeley Data Science student (${p.name}, expected graduation Dec 2027) applying to this role. Do NOT invent or guess any real person's name, email, or profile. Use only facts from the résumé. Do not claim the recipient can flag or forward the application, do not ask for a call, coffee, or "15 minutes", do not claim interest in the company's domain unless it is in the résumé.
+  const ranked = S.rankEntries(state.bank.entries ? resumeFromBank(state.bank) : state.doc, scoredCapabilityIds(), effectiveTrack());
+  const top = ranked[0];
+  const topFacts = top ? bankEntry(top.id)?.facts.slice(0, 2).map((f) => f.text).join(" ") : "";
+  return `Write LinkedIn outreach for ${p.name}${edu.school ? `, a ${edu.degree || "student"} at ${edu.school}` : ""}, applying to this role. Do NOT invent or guess any real person's name, email, or profile. Use only facts from the résumé below. Do not claim the recipient can flag or forward the application, do not ask for a call, coffee, or "15 minutes", do not claim interest in the company's domain unless it is in the résumé.
 
 Résumé (JSON):
 ${JSON.stringify(resume, null, 1)}
@@ -446,7 +456,7 @@ Company: ${company || "the company in the posting"}
 Job description:
 ${jd.slice(0, 8000)}
 
-Strongest product-management evidence to lead with: Project GoalKeeper — founded and built an iOS app for 100+ athletes, ran A/B tests that increased session duration 30%, led product strategy and user research. Mention the recommendation-system work only if the role is data-heavy.
+Strongest evidence to lead with, for this role: ${top ? `${top.name} — ${topFacts}` : "use whichever entry the résumé shows is most relevant"}.
 
 For each audience write:
 - "note": a connection-request note under 260 characters. Start with "Hi {{name}}," and write it so it still reads well if {{name}} is removed. One specific true thing from the résumé, one specific thing about the role.
@@ -699,19 +709,79 @@ els.trackSelect.addEventListener("change", () => { state.trackOverride = els.tra
 els.relevanceOrder.addEventListener("change", () => { state.relevanceOrdering = els.relevanceOrder.checked; if (state.doc) { applyRanking(state.doc); renderEditor(); refreshPdf(); } rescore(); persist(); });
 els.jd.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") els.tailor.click(); });
 
-// ── Base résumé settings ─────────────────────────────────────────────────
+// ── Evidence bank settings — whose résumé this tool produces ─────────────
 
-els.openSettings.addEventListener("click", () => { els.baseResume.value = JSON.stringify(state.base, null, 2); els.settingsStatus.textContent = ""; els.settings.showModal(); });
+function validateBank(bank) {
+  for (const k of ["profile", "education", "entries", "skills"]) if (!(k in bank)) throw new Error(`Missing "${k}"`);
+  if (!Array.isArray(bank.entries) || !bank.entries.length) throw new Error('"entries" must be a non-empty array');
+  for (const e of bank.entries) {
+    for (const k of ["id", "kind", "org", "role", "dates", "facts"]) if (!(k in e)) throw new Error(`Entry "${e.org || "?"}" is missing "${k}"`);
+    if (!Array.isArray(e.facts) || !e.facts.length) throw new Error(`Entry "${e.org}" needs at least one fact`);
+    for (const f of e.facts) { if (!f.id || !f.text) throw new Error(`A fact in "${e.org}" is missing "id" or "text"`); }
+  }
+}
+
+els.openSettings.addEventListener("click", () => {
+  els.baseResume.value = JSON.stringify(state.bank, null, 2);
+  els.importText.value = ""; els.importStatus.textContent = ""; els.settingsStatus.textContent = "";
+  els.settings.showModal();
+});
 els.cancel.addEventListener("click", () => els.settings.close());
-els.reset.addEventListener("click", () => { els.baseResume.value = JSON.stringify(DEFAULT_RESUME, null, 2); });
+els.reset.addEventListener("click", () => { els.baseResume.value = JSON.stringify(EVIDENCE_BANK, null, 2); });
+
+function importPrompt(text) {
+  return `Convert this résumé into a verified evidence bank in the exact JSON schema below. Every fact must be something the résumé actually states — never add a title, employer, date, tool, metric, or result that isn't written. When a bullet would be stronger with a number that isn't given, keep it numberless rather than inventing one.
+
+Résumé text:
+${text.slice(0, 12000)}
+
+Reply with only JSON:
+{
+  "profile": {"name": "...", "phone": "...", "email": "...", "linkedin": "..."},
+  "education": {"school": "...", "grad": "Expected Graduation: ..." (or "Graduated: ..."), "degree": "...", "coursework": "comma-separated or empty string"},
+  "entries": [
+    {"id": "short-lowercase-id", "kind": "experience" | "project", "org": "company or project name", "role": "exact title as written", "location": "city, state or empty", "dates": "as written", "tech": "for kind=project only: tools/stack",
+     "verifiedMetrics": ["every number/percent/count that appears anywhere in this entry's bullets, e.g. \"100+\", \"15%\""], "verifiedTools": ["every tool/language named"],
+     "altTitles": [], "tags": ["short_snake_case_labels for what this entry demonstrates, e.g. data_analysis, product_launch, sql"],
+     "needsConfirmation": [], "prohibited": [],
+     "facts": [{"id": "entryid.short", "text": "one bullet, verbatim or lightly cleaned up, never rewritten to add anything", "metrics": ["numbers this specific fact contains"], "tools": ["tools this specific fact names"], "tags": ["capability tags for just this fact"]}]}
+  ],
+  "skills": {"Category name": "comma-separated skills actually listed or demonstrated", "...": "..."},
+  "unevidencedSkills": ["skills listed in a Skills section with no supporting bullet"]
+}
+
+Include every job/project and every bullet from the résumé as a fact. Use short lowercase entry ids (e.g. "acme", "sidepro"). Do not skip anything, and do not add anything the résumé doesn't say.`;
+}
+const validBankReply = (o) => o && o.profile && o.education && Array.isArray(o.entries) && o.entries.length > 0;
+
+els.importBuild.addEventListener("click", async () => {
+  const text = els.importText.value.trim();
+  if (text.length < 80) { setText(els.importStatus, "Paste the full résumé text first.", "error"); return; }
+  const bank = await ask(importPrompt(text), { btn: els.importBuild, statusEl: els.importStatus, busyMsg: "Reading the résumé and structuring it into verified facts — usually 20–40 seconds…", validate: validBankReply });
+  if (!bank) return;
+  bank.version = 1;
+  for (const e of bank.entries) { e.altTitles = e.altTitles || []; e.needsConfirmation = e.needsConfirmation || []; e.prohibited = e.prohibited || []; for (const f of e.facts) { f.metrics = f.metrics || []; f.tools = f.tools || []; f.tags = f.tags || []; } }
+  bank.unevidencedSkills = bank.unevidencedSkills || [];
+  try { validateBank(bank); } catch (e) { setText(els.importStatus, `Claude's reply didn't parse into a valid bank: ${e.message}. Try again or edit the JSON below by hand.`, "error"); return; }
+  els.baseResume.value = JSON.stringify(bank, null, 2);
+  setText(els.importStatus, `Built ${bank.entries.length} entries with ${bank.entries.reduce((a, e) => a + e.facts.length, 0)} facts. Review the JSON below, then Save.`, "ok");
+});
+
 els.save.addEventListener("click", () => {
-  let base;
-  try { base = JSON.parse(els.baseResume.value); for (const k of ["profile", "education", "experience", "projects", "skills"]) if (!(k in base)) throw new Error(`Missing "${k}"`); }
-  catch (e) { els.settingsStatus.textContent = `Résumé JSON is invalid: ${e.message}`; els.settingsStatus.className = "status error"; return; }
-  const customized = JSON.stringify(base) !== JSON.stringify(DEFAULT_RESUME);
-  state.base = base; store.set("baseResume", base); store.set("baseCustomized", customized);
+  let bank;
+  try { bank = JSON.parse(els.baseResume.value); validateBank(bank); }
+  catch (e) { els.settingsStatus.textContent = `Evidence bank JSON is invalid: ${e.message}`; els.settingsStatus.className = "status error"; return; }
+  const customized = JSON.stringify(bank) !== JSON.stringify(EVIDENCE_BANK);
+  state.bank = bank; state.bankCustomized = customized;
+  store.set("customBank", bank); store.set("bankCustomized", customized);
+  state.base = resumeFromBank(bank);
+  state.trackOverride = ""; els.trackSelect.value = "";
+  state.reqs = null; state.result = null; state.targets = null; state.claudeVersion = null;
+  state.doc = baseDoc();
+  renderTrack(); renderEditor(); refreshPdf(); rescore(); renderOutreach();
   els.settings.close();
-  setStatus(customized ? "Base résumé saved. It will keep your version over future updates." : "Base résumé reset to the built-in default.");
+  setStatus(customized ? `Now tailoring for ${esc(bank.profile.name)}. It will keep this résumé over future built-in updates.` : "Reset to the built-in example (Aneesh's résumé).");
+  persist();
 });
 
 // ── Capabilities light up when the viewer runtime answers ────────────────
