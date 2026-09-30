@@ -504,10 +504,12 @@ const PRODUCT_SKILL_TEMPLATE = {
 };
 const REQUESTED_TOOLS = /\b(tableau|looker|spark|pyspark|bigquery|snowflake|dbt|airflow|figma|jira|excel|scala|java|c\+\+|kotlin|tensorflow|pytorch|scikit-learn|aws|gcp|azure|docker|kubernetes|power bi)\b/g;
 function selectSkills(bank, track, jd, max = 12) {
-  const verified = bank.verifiedSkills || [];
+  const banned = new Set((bank.prohibited || []).map((p) => p.toLowerCase()));
+  const isBanned = (name) => banned.has(String(name).toLowerCase());
+  const verified = (bank.verifiedSkills || []).filter((v) => !isBanned(v.name));
   if (["product_management", "product_strategy", "ai_product"].includes(track)) {
     const have = new Set(verified.map((v) => v.name.toLowerCase()));
-    const skills = Object.entries(PRODUCT_SKILL_TEMPLATE).map(([cat, names]) => ({ cat, vals: names.filter((n) => have.has(n.toLowerCase())).join(", ") })).filter((s) => s.vals);
+    const skills = Object.entries(PRODUCT_SKILL_TEMPLATE).map(([cat, names]) => ({ cat, vals: names.filter((n) => have.has(n.toLowerCase()) && !isBanned(n)).join(", ") })).filter((s) => s.vals);
     const requested = [...String(jd || "").toLowerCase().matchAll(REQUESTED_TOOLS)].map((m) => m[1]);
     return { skills, unsupported: [...new Set(requested)].filter((r) => !have.has(r)) };
   }
@@ -651,7 +653,7 @@ function qualityControl(doc, { jd = "", bank = null, pdf = null, relevanceOrderi
       if (!b || !b.trim()) { add("warn", `${en.org || en.name}: empty bullet ${i + 1}.`); return; }
       const fid = (en.factIds || [])[i];
       const src = fid ? facts.get(fid) : null;
-      if (src) { const g = factGuard(b, src.f, src.e); if (!g.ok) add("block", `${en.org || en.name}, bullet ${i + 1}: ${g.problems.join("; ")}.`); }
+      if (src) { const g = factGuard(b, src.f, src.e, bank); if (!g.ok) add("block", `${en.org || en.name}, bullet ${i + 1}: ${g.problems.join("; ")}.`); }
       else if (be) add("warn", `${en.org || en.name}, bullet ${i + 1} was typed by hand and is not tied to a verified fact — make sure it is true.`);
       const q = bulletQuality(b); if (!q.strong) add("warn", `${en.org || en.name}, bullet ${i + 1}: weak phrasing.`);
       if (b.length > 200) add("warn", `${en.org || en.name}, bullet ${i + 1}: ${b.length} characters — consider trimming.`);
@@ -690,7 +692,7 @@ function suggestedQuestions(result, bank) {
 // (or the source entry) verifies. Returns {ok, problems[]}.
 const TOOL_WORDS = /\b(python|sql|r|swift|rust|java|javascript|typescript|c\+\+|go|scala|spark|pyspark|tableau|power bi|looker|figma|jira|excel|aws|azure|gcp|docker|kubernetes|tensorflow|pytorch|scikit-learn|pandas|numpy|postgresql|mysql|mongodb|firebase|react|node\.js|ios|android|kotlin|llm|etl|airflow|dbt|snowflake|bigquery|redshift|git)\b/gi;
 
-function factGuard(bullet, fact, entry) {
+function factGuard(bullet, fact, entry, bank) {
   const problems = [];
   const allowedMetrics = new Set([...(fact?.metrics || []), ...(entry?.verifiedMetrics || [])].map((m) => normalizeMetric(m)));
   for (const m of String(bullet).matchAll(/\d[\d,]*(?:\.\d+)?\s*(?:%|\+|k|x|-day|-week|-month)?/gi)) {
@@ -704,9 +706,9 @@ function factGuard(bullet, fact, entry) {
     if (t === "r" && !/\bin R\b|\busing R\b|\bR\b(?= using|,| and)/.test(bullet)) continue;
     if (!allowedTools.has(t) && !/\b(etl)\b/.test(t)) problems.push(`tool “${m[0]}” is not verified for this fact`);
   }
-  for (const p of entry?.prohibited || []) {
+  for (const p of [...(entry?.prohibited || []), ...(bank?.prohibited || [])]) {
     const key = p.replace(/[^a-z0-9 ]/gi, " ").trim().split(/\s+/).slice(0, 2).join(" ");
-    if (key && normalize(bullet).includes(normalize(key))) problems.push(`prohibited extrapolation: ${p}`);
+    if (key && normalize(bullet).includes(normalize(key))) problems.push(`prohibited: ${p}`);
   }
   return { ok: problems.length === 0, problems };
 }

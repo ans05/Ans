@@ -126,6 +126,22 @@ test("classification separates subjective traits from analytical requirements", 
   assert.equal(S.classify({ statement: "Candidates must be authorized to work in the United States", category: "required_qualification" }), "logistics");
 });
 
+// A bank-wide prohibited list applies to every entry, not just the one it's declared on.
+test("bank-wide prohibited items block a claim under ANY entry, and don't affect unrelated entries", () => {
+  assert.deepEqual(EVIDENCE_BANK.prohibited, ["Microsoft PowerPoint", "Microsoft Word", "Microsoft Excel"]);
+  const entry = EVIDENCE_BANK.entries.find((e) => e.id === "haas");
+  const fact = entry.facts.find((f) => f.id === "haas.comms");
+  const bad = S.factGuard("Presented experimental results in Microsoft PowerPoint decks to 2 faculty PIs", fact, entry, EVIDENCE_BANK);
+  assert.equal(bad.ok, false);
+  assert.ok(bad.problems.some((p) => /Microsoft PowerPoint/.test(p)));
+  // Without the bank argument (old call shape), the bank-wide list is simply not checked — no crash.
+  assert.ok(S.factGuard(fact.text, fact, entry).ok);
+  // Skills selection never lists a bank-wide-prohibited name even if verifiedSkills somehow contained one.
+  const withBanned = { ...EVIDENCE_BANK, verifiedSkills: [...EVIDENCE_BANK.verifiedSkills, { name: "Microsoft Excel", group: "Product & Tools", evidence: "listed" }] };
+  const sk = S.selectSkills(withBanned, "ds_ml", "");
+  assert.ok(!sk.skills.some((s) => /Excel/.test(s.vals)));
+});
+
 // A "graduate program" requirement is a knowable fact from Education, distinct from field-of-study —
 // wrong reading was lumping "enrolled in a graduate program" and "graduation date" into one vague miss.
 test("graduate-enrollment requirement reads Education directly and is never a vague guess", () => {

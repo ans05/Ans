@@ -194,7 +194,7 @@ function docFromSelection(sel) {
         if (!src || src.entry.id !== e.id || seen.has(b.factId)) continue;
         seen.add(b.factId);
         let text = String(b.text || src.fact.text).replace(/^[^:]{1,40}:\s*/, "").trim();
-        const g = S.factGuard(text, src.fact, e);
+        const g = S.factGuard(text, src.fact, e, state.bank);
         if (!g.ok) { guardNotes.push(`${e.org}: ${g.problems.join("; ")} — used the verified fact text instead`); text = src.fact.text; }
         bullets.push({ factId: b.factId, text });
       }

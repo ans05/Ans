@@ -11,6 +11,9 @@
 
 const EVIDENCE_BANK = {
   version: 2,
+  // Applies to every entry, regardless of which one a bullet is under — confirmed 2026-09-30:
+  // don't claim these tools until explicitly confirmed, even if a future edit adds them elsewhere.
+  prohibited: ["Microsoft PowerPoint", "Microsoft Word", "Microsoft Excel"],
   profile: {
     name: "Aneesh Srirambhatla",
     phone: "424-390-9605",
