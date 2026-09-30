@@ -61,8 +61,8 @@ const EVIDENCE_BANK = {
       verifiedTools: ["LLM"],
       altTitles: [],
       tags: ["ml_evaluation", "data_analysis", "process_improvement"],
-      needsConfirmation: ["SQL/BigQuery work involving 10,000+ predictions — not in the bank; do not claim until confirmed", "Whether multiple reviewers were calibrated for consistency"],
-      prohibited: ["BigQuery", "inter-rater consistency work", "model accuracy numbers"],
+      needsConfirmation: [],
+      prohibited: ["BigQuery", "inter-rater consistency work", "model accuracy numbers", "the 10,000+ prediction pipeline (that work is FlourishAI's, confirmed, not Mercor's)", "coordinating or calibrating multiple reviewers"],
       facts: [
         { id: "mercor.eval", result: "500+ responses scored", text: "Evaluated 500+ LLM responses against correctness and instruction-following criteria, isolating recurring failure patterns that fed directly into model improvements", metrics: ["500+"], tools: ["LLM"], tags: ["ml_evaluation", "data_analysis", "ai_evaluation"] },
         { id: "mercor.data", text: "Authored high-signal examples for a 15,000+ response training dataset used to refine model behavior and raise evaluation quality", metrics: ["15,000+"], tools: [], tags: ["ml_evaluation"] },
@@ -82,8 +82,8 @@ const EVIDENCE_BANK = {
       verifiedMetrics: ["1,000+", "481", "10+", "20+", "2", "5-10"],
       verifiedTools: ["R"],
       tags: ["statistics", "experimentation", "user_research", "data_analysis", "stakeholder_communication", "r_language", "qualitative_research"],
-      needsConfirmation: ["Total number of studies designed and total participants across them"],
-      prohibited: ["sole ownership of study design (co-designed only)", "publication claims"],
+      needsConfirmation: ["Total number of studies designed and total unique participants across them"],
+      prohibited: ["sole ownership of study design (co-designed only)", "publication claims", "equating '1,000+ responses' with '1,000+ participants' (responses ≠ unique participants)", "a specific number of studies not stated in a fact"],
       facts: [
         { id: "haas.hypotheses", result: "1,000+ regression", text: "Structured open-ended behavioral research questions into testable hypotheses and analyzed 1,000+ participant responses in R using regression", metrics: ["1,000+"], tools: ["R"], tags: ["statistics", "data_analysis", "experimentation", "r_language"] },
         { id: "haas.factors", text: "Examined 10+ factors that influence leadership and group behavior under Professors Cameron Anderson and Angus Hildreth", metrics: ["10+"], tools: [], tags: ["user_research", "statistics"] },
@@ -150,7 +150,7 @@ const EVIDENCE_BANK = {
       altTitles: [],
       tags: ["product_ownership", "product_launch", "ai_evaluation", "data_engineering", "python", "initiative", "quality"],
       needsConfirmation: ["Any measured outcome from users (time saved, interviews landed, etc.)"],
-      prohibited: ["revenue", "funding", "company/team size", "specific company logos as customers"],
+      prohibited: ["revenue", "funding", "company/team size", "specific company logos as customers", "time saved by users (not measured)", "interviews landed or other career outcomes (not measured)"],
       facts: [
         { id: "rt.core", result: "core tool", text: "Built an AI-powered resume tailoring tool used by 30+ active users to flag qualification gaps and suggest targeted improvements against job postings", metrics: ["30+"], tools: ["Claude API", "LLM"], tags: ["ai_evaluation", "product_ownership", "product_launch", "data_analysis"] },
         { id: "rt.scoring", result: "scoring engine", text: "Developed a 35-rule matching engine and 5-factor scoring system pairing Claude API reasoning with structured evidence checks to score job fit beyond keywords", metrics: ["35", "5"], tools: ["Claude API", "LLM"], tags: ["ai_evaluation", "data_analysis"] },
