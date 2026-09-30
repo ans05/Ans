@@ -126,6 +126,22 @@ test("classification separates subjective traits from analytical requirements", 
   assert.equal(S.classify({ statement: "Candidates must be authorized to work in the United States", category: "required_qualification" }), "logistics");
 });
 
+// A "graduate program" requirement is a knowable fact from Education, distinct from field-of-study —
+// wrong reading was lumping "enrolled in a graduate program" and "graduation date" into one vague miss.
+test("graduate-enrollment requirement reads Education directly and is never a vague guess", () => {
+  const r = S.evaluate([{ statement: "Currently enrolled in a full-time graduate degree program", category: "required_qualification", capabilities: ["graduate_enrollment"] }], DEFAULT_RESUME, { bank: EVIDENCE_BANK });
+  const item = r.items[0];
+  assert.equal(item.status, "missing");
+  assert.equal(item.evidenceType, "direct");
+  assert.match(item.evidence, /B\.A\./);
+  assert.equal(item.verdict, "Not evidenced — do not add");
+  assert.doesNotMatch(item.why, /outside the evidence vocabulary/);
+  // A graduate-level résumé matches directly.
+  const gradDoc = { ...DEFAULT_RESUME, education: { ...DEFAULT_RESUME.education, degree: "M.S. Data Science" } };
+  const g = S.evaluate([{ statement: "Currently enrolled in a graduate degree program", category: "required_qualification", capabilities: ["graduate_enrollment"] }], gradDoc, { bank: EVIDENCE_BANK });
+  assert.equal(g.items[0].status, "matched");
+});
+
 // Degree matches from Education, not from bullets.
 test("degree requirement is evidenced by the Education section", () => {
   const r = S.evaluate([{ statement: "Pursuing degree in computer science, engineering, or related field", category: "required_qualification", capabilities: ["degree_related_field"] }], DEFAULT_RESUME);

@@ -264,8 +264,10 @@ test("Figma data-science workflow: DS track ordering, dedupe of the duplicate 30
     await p.waitForFunction(() => document.querySelector(".tab.active")?.dataset.tab === "score", null, { timeout: 15000 });
     await p.waitForTimeout(300);
     assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["FlourishAI (Berkeley SkyDeck)", "Haas School of Business Lab", "Mercor", "Siemens Healthineers"]);
-    const gkBullets = await p.locator('[data-path^="projects.0.bullets."]').allTextContents();
-    assert.equal(gkBullets.filter((t) => /30%/.test(t)).length, 1, "only one 30% bullet");
+    // Resume Tailor now also ranks as a project for the ds_ml track, so check across all
+    // project bullets rather than assuming GoalKeeper is projects[0].
+    const allProjectBullets = await p.locator('[data-path^="projects."][data-path*=".bullets."]').allTextContents();
+    assert.equal(allProjectBullets.filter((t) => /30%/.test(t)).length, 1, "only one 30% bullet");
     const skills = await p.locator('[data-path^="skills."][data-path$=".vals"]').allTextContents();
     assert.match(skills[0], /^Python, SQL, R/);
     const missing = await p.locator("ul.checks li.miss .req > span:first-child").allTextContents();

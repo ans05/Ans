@@ -44,6 +44,12 @@ const CAPABILITIES = {
     section: "education",
     fields: /\b(data science|computer science|engineering|information systems|business|mathematics|statistics|economics|cognitive science|hci|human.computer interaction)\b/i,
   },
+  graduate_enrollment: {
+    label: "Currently enrolled in a graduate degree program",
+    degreeLevel: true,
+    graduateWords: /\b(m\.?s\.?|m\.?a\.?|mba|m\.?eng\.?|ph\.?d\.?|master'?s?|doctoral|doctorate|graduate program)\b/i,
+    undergradWords: /\b(b\.?a\.?|b\.?s\.?|bachelor'?s?|undergraduate)\b/i,
+  },
   cross_functional_collaboration: {
     label: "Cross-functional collaboration",
     full: (t) => VERB.collab.test(t) && distinctFunctions(t) >= 2,
@@ -238,6 +244,13 @@ function evaluateCapability(capId, units, keywords = []) {
   if (cap.section === "education") {
     const u = units.find((u) => u.section === "education" && cap.fields.test(u.text));
     return u ? { ...result, status: "matched", evidence: u.text, where: u.where, reason: "degree field listed in Education", confidence: "high", evidenceType: "direct" } : result;
+  }
+
+  if (cap.degreeLevel) {
+    const edu = units.find((u) => u.section === "education" && (cap.graduateWords.test(u.text) || cap.undergradWords.test(u.text)));
+    if (edu && cap.graduateWords.test(edu.text)) return { ...result, status: "matched", evidence: edu.text, where: edu.where, reason: "degree level listed in Education is graduate-level", confidence: "high", evidenceType: "direct" };
+    if (edu && cap.undergradWords.test(edu.text)) return { ...result, status: "missing", evidence: edu.text, where: edu.where, reason: "Education lists an undergraduate degree, not graduate enrollment", confidence: "high", evidenceType: "direct" };
+    return { ...result, reason: "no degree level stated in Education to check against" };
   }
 
   if (cap.scale) {
@@ -515,11 +528,12 @@ function selectSkills(bank, track, jd, max = 12) {
 }
 
 // ── Missing-item verdicts ───────────────────────────────────────────────
-const CAP_KIND = { scale_millions: "scale", degree_related_field: "eligibility" };
+const CAP_KIND = { scale_millions: "scale", degree_related_field: "eligibility", graduate_enrollment: "degree_level" };
 function missingVerdict(item, bank) {
   const cap = item.capability;
   const kind = CAP_KIND[cap] || (CAPABILITIES[cap] ? "activity" : "skill");
   const prohibited = (bank?.entries || []).some((e) => (e.prohibited || []).some((p) => cap && normalize(p).includes(normalize(cap.replace(/_/g, " ")).split(" ")[0])));
+  if (kind === "degree_level" && item.evidenceType === "direct") return { verdict: "Not evidenced — do not add", why: "Education states an undergraduate degree; this can't be resolved by rewording — only by actually being enrolled in a graduate program" };
   if (kind === "scale" || prohibited) return { verdict: "Not evidenced — do not add", why: kind === "scale" ? "the posting describes the employer's scale; no résumé claim can truthfully supply it" : "a related claim is explicitly prohibited in the evidence bank" };
   return { verdict: "Needs candidate confirmation", why: kind === "skill" ? "a tool or skill the candidate may have used but has not documented" : "the candidate may have done this in a role already on the résumé; it is not documented" };
 }
