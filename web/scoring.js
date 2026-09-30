@@ -336,11 +336,11 @@ function classifyTrack(jd) {
 // Track-specific experience order (entry ids). GoalKeeper is a project section; when it is
 // ranked first the Projects section leads, otherwise Projects follows Experience.
 const TRACK_ORDER = {
-  ds_ml: ["flourish", "haas", "mercor", "siemens", "goalkeeper"],
-  product_analytics: ["flourish", "goalkeeper", "haas", "siemens", "mercor"],
-  product_management: ["siemens", "goalkeeper", "flourish", "haas", "mercor"],
-  ai_product: ["flourish", "mercor", "goalkeeper", "siemens", "haas"],
-  product_strategy: ["siemens", "goalkeeper", "flourish", "haas", "mercor"],
+  ds_ml: ["flourish", "haas", "mercor", "resumetailor", "siemens", "goalkeeper"],
+  product_analytics: ["flourish", "resumetailor", "goalkeeper", "haas", "siemens", "mercor"],
+  product_management: ["siemens", "goalkeeper", "resumetailor", "flourish", "haas", "mercor"],
+  ai_product: ["flourish", "mercor", "resumetailor", "goalkeeper", "siemens", "haas"],
+  product_strategy: ["siemens", "goalkeeper", "resumetailor", "flourish", "haas", "mercor"],
 };
 
 // Verified skills to lead with per track (only ones present in the bank are ever listed).
