@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Resume Tailor",
+  "description": "Click on any job posting to get a one-page resume tailored to it. Edit the bullets, download the PDF.",
+  "version": "1.0",
+  "action": {
+    "default_title": "Tailor resume for this job"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["https://api.anthropic.com/*"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

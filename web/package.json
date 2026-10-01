@@ -1,0 +1,10 @@
+{
+  "name": "resume-tailor-web",
+  "private": true,
+  "scripts": {
+    "build": "python3 build.py",
+    "test": "python3 build.py && node --test tests/scoring.test.mjs tests/tracks.test.mjs tests/import.test.mjs tests/e2e.test.mjs",
+    "test:unit": "node --test tests/scoring.test.mjs tests/tracks.test.mjs tests/import.test.mjs",
+    "test:e2e": "python3 build.py && node --test tests/e2e.test.mjs"
+  }
+}

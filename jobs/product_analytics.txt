@@ -1,0 +1,19 @@
+Product Analytics Intern — Notion
+San Francisco, CA
+
+The Product Analytics team helps Notion's product teams make better decisions with data. You'll partner with product managers and engineers to define metrics, build dashboards, and analyze experiments.
+
+What you'll do:
+- Write SQL to build and maintain dashboards tracking product KPIs such as activation, retention, and conversion
+- Analyze A/B tests and report results and recommendations to product managers
+- Define success metrics for new features with product and design partners
+- Investigate funnel drop-offs and user behavior patterns to identify opportunities
+
+What we're looking for:
+- Strong SQL skills and experience with Python or R for analysis
+- Experience with experimentation or A/B testing
+- Familiarity with a BI tool such as Looker, Tableau, or Mode
+- Clear written communication; able to explain analyses to non-technical partners
+
+Nice to have:
+- Experience with product analytics tools (Amplitude, Mixpanel)

@@ -1,0 +1,16 @@
+Product Manager Intern — Stripe
+
+Stripe is a financial infrastructure platform for businesses. Millions of companies — from the world's largest enterprises to the most ambitious startups — use Stripe to accept payments, grow their revenue, and accelerate new business opportunities. Our mission is to increase the GDP of the internet. We are a fast-growing, mission-driven team of curious builders who care deeply about our users and each other. Every day, our products move hundreds of billions of dollars for businesses in over 120 countries.
+
+We believe in intellectual honesty, optimism, and craft. We move fast and take ownership. Our culture is collaborative and humble, and we celebrate wins together.
+
+What you'll do:
+- Conduct user research and gather feedback from merchants to shape the roadmap
+- Support market research and competitive analysis for a payments product
+- Partner with engineers and designers to ship product improvements
+
+What you'll need:
+- Experience analyzing data with SQL
+- Ability to define product strategy and prioritize a roadmap
+
+Stripe does not sponsor visas for this internship. Candidates must be authorized to work in the US.

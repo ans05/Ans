@@ -104,3 +104,54 @@ clearBlockedButton.addEventListener('click', () => {
 // Initial display of blocked sites on popup load
 displayBlockedSites();
 
+// ── Tab navigation ──────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Job Autofill ─────────────────────────────────────────────
+const profileFields = ['j-name','j-email','j-phone','j-linkedin','j-website','j-location','j-experience','j-resume'];
+
+// Load saved profile into inputs
+chrome.storage.sync.get({ jobProfile: {} }, ({ jobProfile }) => {
+  profileFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && jobProfile[id]) el.value = jobProfile[id];
+  });
+});
+
+document.getElementById('save-profile').addEventListener('click', () => {
+  const profile = {};
+  profileFields.forEach(id => {
+    profile[id] = document.getElementById(id).value.trim();
+  });
+  chrome.storage.sync.set({ jobProfile: profile }, () => {
+    const s = document.getElementById('jobs-status');
+    s.textContent = 'Profile saved!';
+    setTimeout(() => { s.textContent = ''; }, 2000);
+  });
+});
+
+document.getElementById('autofill-now').addEventListener('click', () => {
+  const profile = {};
+  profileFields.forEach(id => {
+    profile[id] = document.getElementById(id).value.trim();
+  });
+  const s = document.getElementById('jobs-status');
+  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['content_autofill.js']
+    }, () => {
+      chrome.tabs.sendMessage(tab.id, { type: 'AUTOFILL_JOB', profile }, (resp) => {
+        s.textContent = resp?.filled ? `Filled ${resp.filled} field(s)!` : 'No fillable fields found.';
+        setTimeout(() => { s.textContent = ''; }, 3000);
+      });
+    });
+  });
+});

@@ -1,0 +1,32 @@
+Data Scientist Intern — Robinhood (Brokerage)
+Menlo Park, CA
+
+We are building an elite team, applying frontier technologies to the world's biggest financial problems. We're looking for bold thinkers. Sharp problem-solvers. Builders who are wired to make an impact.
+
+As a Data Scientist Intern on the Brokerage Data Science team, you'll be part of a high-impact, multi-functional group working closely with partners across product, engineering, user research, design, marketing, finance, and operations.
+
+This role is based in our Menlo Park office(s), with in-person attendance expected at least 3 days per week.
+
+What you'll do
+- Partner directly with a current team member on a specific product line.
+- Perform deep-dive analyses to identify product growth opportunities and drive improvements in core business metrics.
+- Design, plan, implement, and analyze A/B experiments, and conduct causal inference analysis to evaluate product changes.
+- Gain expertise in predictive modeling, uplift modeling, causal inference, and experimentation design.
+- Define and maintain key product performance metrics; build scalable dashboards to monitor these metrics and advise decision-making.
+- Build compelling data visualizations and narratives to effectively communicate insights and recommendations to multi-functional partners, collaborators, and senior leadership.
+- Lead and implement large-scale analytics projects to uncover user insights, inform product strategy, and deliver measurable business impact.
+- Partner closely with Product, Engineering, Operations, and other multi-functional teams to integrate data-driven decision-making into product and business processes.
+
+What you bring
+- Currently enrolled in a full-time, graduate degree program with an expected graduation date in Winter 2027 or Spring 2028.
+- Pursuing a graduate degree in a quantitative field such as mathematics, statistics, engineering or natural science.
+- Proven expertise in data science, with a strong background in statistical analysis and machine learning.
+- Outstanding problem-solving skills and the ability to think critically and creatively.
+- Strong programming skills in Python & SQL, or other relevant languages.
+- Experience with data visualization tools and techniques.
+- Ability to successfully implement projects and compete in a fast-paced environment.
+- Previous experience working in financial technology is preferred.
+
+Zone 1 (Menlo Park, CA; New York, NY; Bellevue, WA; Washington, DC): $44 - $44 USD.
+
+AI Usage Disclosure: Robinhood uses artificial intelligence (AI) tools to support parts of our recruiting process. These tools enhance the efficiency and consistency of our hiring process; however, all hiring decisions are made by our hiring teams.

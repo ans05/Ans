@@ -7,7 +7,14 @@
       "activeTab",
       "storage",
       "declarativeContent",
-      "tabs"
+      "tabs",
+      "scripting"
+    ],
+    "host_permissions": [
+      "https://simplify.jobs/*",
+      "https://*.greenhouse.io/*",
+      "https://*.lever.co/*",
+      "https://*.workday.com/*"
     ],
     "background": {
       "service_worker": "background.js"
