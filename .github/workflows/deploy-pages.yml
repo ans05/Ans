@@ -1,7 +1,8 @@
 # Publishes AFTERHOURS to GitHub Pages on every push to main.
 #
-# One-time setup: in the repository's Settings → Pages, set "Source" to
-# "GitHub Actions". The site then lives at https://<owner>.github.io/<repo>/.
+# The configure-pages step tries to enable Pages automatically. If that is
+# refused, do it once by hand: Settings → Pages → Source: "GitHub Actions".
+# The site then lives at https://<owner>.github.io/<repo>/.
 name: Deploy to GitHub Pages
 
 on:
@@ -35,6 +36,9 @@ jobs:
           cache: npm
           cache-dependency-path: afterhours/package-lock.json
       - run: npm ci
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - run: npm run build
         env:
           # Pages serves the site under /<repo>/, so assets need that prefix.
