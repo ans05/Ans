@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SONAR</title>
+<style>
+  :root {
+    --bg: #07090f; --panel: rgba(255,255,255,.04); --line: rgba(255,255,255,.12);
+    --text: #eef1f7; --muted: #8d96a8; --accent: #5ee6c8; --accent2: #7aa2ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: radial-gradient(1000px 600px at 50% -10%, #14213d 0%, var(--bg) 60%);
+    color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 20px 80px; }
+  h1 { font-size: 14px; letter-spacing: .4em; margin: 0 0 12px; color: var(--accent); }
+  h2 { font-size: 12px; letter-spacing: .25em; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
+  .badge { display: inline-block; font-size: 11px; letter-spacing: .15em; padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); }
+  svg { width: 100%; height: auto; display: block; }
+  .edge { stroke: rgba(255,255,255,.18); stroke-width: 1.5; fill: none; transition: stroke .3s, stroke-width .3s; }
+  .edge.active { stroke: var(--accent); stroke-width: 2.5; }
+  .node { cursor: pointer; outline: none; }
+  .node circle { fill: #0d1424; stroke: var(--accent2); stroke-width: 2; transition: all .25s; }
+  .node:hover circle, .node:focus-visible circle, .node.sel circle { stroke: var(--accent); fill: #12302f; }
+  .node text { fill: var(--text); font-size: 11px; letter-spacing: .12em; text-anchor: middle; pointer-events: none; }
+  .pulse { fill: var(--accent); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; backdrop-filter: blur(8px); }
+  .pair { font-size: 24px; margin: 4px 0 14px; }
+  .meter { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+  .bar { flex: 1; height: 8px; background: rgba(255,255,255,.1); border-radius: 99px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 99px; transition: width .7s cubic-bezier(.2,.7,.2,1); }
+  .pct { color: var(--text); font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+  button { font: inherit; font-size: 14px; padding: 10px 18px; border-radius: 99px; cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--text); transition: background .2s, transform .2s; }
+  button.primary { background: var(--accent); color: #04110e; border-color: var(--accent); font-weight: 600; }
+  button:hover { transform: translateY(-1px); background: rgba(255,255,255,.08); }
+  button.primary:hover { background: #7ff0d7; }
+  button:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  li:last-child { border: 0; }
+  .up { color: var(--accent); font-variant-numeric: tabular-nums; }
+  #status { min-height: 1.5em; color: var(--muted); font-size: 14px; margin-top: 12px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } .pulse { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>SONAR</h1>
+  <span class="badge">DEMO DATA</span>
+  <hr>
+
+  <svg viewBox="0 0 600 340" role="img" aria-label="Artist collaboration network. Select a node to see its strongest connection.">
+    <g id="edges"></g>
+    <g id="pulses"></g>
+    <g id="nodes"></g>
+  </svg>
+
+  <hr>
+  <section class="card" aria-live="polite">
+    <h2>TRENDING CONNECTION</h2>
+    <div class="pair" id="pair"></div>
+    <div class="meter">
+      <span>Collaboration strength</span>
+      <div class="bar"><div class="fill" id="fill"></div></div>
+      <span class="pct" id="pct"></span>
+    </div>
+    <div class="actions">
+      <button class="primary" id="explore">Explore Network</button>
+      <button id="play">Play Related Tracks</button>
+    </div>
+    <div id="status"></div>
+  </section>
+
+  <hr>
+  <section>
+    <h2>SCENE PULSE</h2>
+    <ul id="scene"></ul>
+  </section>
+</main>
+
+<script>
+// ---- Demo data (fictional artists, simulated numbers) ----
+const nodes = [
+  { id: "a", label: "NOVA REYES",  x: 170, y: 50 },
+  { id: "b", label: "ELLIS KANE",  x: 430, y: 50 },
+  { id: "c", label: "MARLOWE",     x: 90,  y: 170 },
+  { id: "d", label: "KEN OKADA",   x: 240, y: 170 },
+  { id: "e", label: "PRODUCER X",  x: 480, y: 170 },
+  { id: "f", label: "STAR TRACTS", x: 90,  y: 290 },
+];
+const edges = [
+  { from: "a", to: "b", strength: 64 },
+  { from: "a", to: "c", strength: 87 },
+  { from: "a", to: "d", strength: 58 },
+  { from: "d", to: "e", strength: 71 },
+  { from: "b", to: "e", strength: 76 },
+  { from: "c", to: "f", strength: 49 },
+];
+const scene = [
+  { city: "Los Angeles", delta: 28 },
+  { city: "Atlanta",     delta: 17 },
+  { city: "New York",    delta: 12 },
+];
+
+const NS = "http://www.w3.org/2000/svg";
+const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+const el = (tag, attrs = {}, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const name = n => n.label.split(" ").map(w => w[0] + w.slice(1).toLowerCase()).join(" ");
+
+// ---- Render graph ----
+const gE = document.getElementById("edges"), gP = document.getElementById("pulses"), gN = document.getElementById("nodes");
+const edgeEls = edges.map(e => {
+  const a = byId[e.from], b = byId[e.to];
+  const line = el("line", { class: "edge", x1: a.x, y1: a.y, x2: b.x, y2: b.y }, gE);
+  const dot = el("circle", { class: "pulse", r: 3, cx: a.x, cy: a.y }, gP);
+  if (!reduce) {
+    const dur = 2 + (100 - e.strength) / 25; // stronger link = faster pulses
+    const m = (attr, v) => el("animate", { attributeName: attr, values: v, dur: dur + "s", repeatCount: "indefinite" }, dot);
+    m("cx", `${a.x};${b.x}`); m("cy", `${a.y};${b.y}`);
+    m("opacity", "0;1;1;0");
+  }
+  return line;
+});
+nodes.forEach(n => {
+  const g = el("g", { class: "node", tabindex: 0, role: "button", "aria-label": n.label, transform: `translate(${n.x},${n.y})` }, gN);
+  el("circle", { r: 16 }, g);
+  const t = el("text", { y: 34 }, g); t.textContent = n.label;
+  const pick = () => select(n.id);
+  g.addEventListener("click", pick);
+  g.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(); } });
+  n.el = g;
+});
+
+// ---- Selection: show node's strongest connection ----
+function select(id) {
+  const mine = edges.filter(e => e.from === id || e.to === id);
+  const best = mine.reduce((p, c) => (c.strength > p.strength ? c : p));
+  nodes.forEach(n => n.el.classList.toggle("sel", n.id === id));
+  edgeEls.forEach((l, i) => l.classList.toggle("active", edges[i] === best));
+  const other = byId[best.from === id ? best.to : best.from];
+  document.getElementById("pair").textContent = `${name(byId[id])} → ${name(other)}`;
+  document.getElementById("pct").textContent = best.strength + "%";
+  document.getElementById("fill").style.width = best.strength + "%";
+  document.getElementById("status").textContent = "";
+  current = { a: byId[id], b: other };
+}
+let current;
+
+// ---- Scene pulse ----
+document.getElementById("scene").innerHTML = scene
+  .map(s => `<li><span>${s.city}</span><span class="up">+${s.delta}% ↑</span></li>`).join("");
+
+// ---- Buttons (hook these up to your real app) ----
+const status = document.getElementById("status");
+document.getElementById("explore").onclick = () =>
+  status.textContent = `Exploring the network around ${name(current.a)} and ${name(current.b)}…`;
+document.getElementById("play").onclick = () =>
+  status.textContent = `Queuing tracks related to ${name(current.a)} × ${name(current.b)}…`;
+
+// Default: the trending (strongest) connection overall
+select(edges.reduce((p, c) => (c.strength > p.strength ? c : p)).from);
+</script>
+</body>
+</html>
