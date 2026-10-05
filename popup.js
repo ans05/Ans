@@ -1,106 +1,158 @@
-// Pomodoro Timer
-let timerInterval;
-let timeLeft = 1500; // 25 minutes in seconds
+const POMODORO_SECONDS = 1500; // 25 minutes
+
+// ---------- Pomodoro Timer ----------
+// State lives in storage so it survives the popup closing; the background alarm notifies.
 const timerDisplay = document.getElementById('timer');
+let timerInterval;
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s < 10 ? '0' + s : s}`;
+}
+
+function renderTimer() {
+  chrome.storage.local.get({ timerEnd: null }, ({ timerEnd }) => {
+    if (!timerEnd) {
+      clearInterval(timerInterval);
+      timerDisplay.textContent = formatTime(POMODORO_SECONDS);
+      return;
+    }
+    const left = Math.max(0, Math.round((timerEnd - Date.now()) / 1000));
+    timerDisplay.textContent = formatTime(left);
+  });
+}
 
 document.getElementById('start-timer').addEventListener('click', () => {
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    if (timeLeft > 0) {
-      timeLeft--;
-      const minutes = Math.floor(timeLeft / 60);
-      const seconds = timeLeft % 60;
-      timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
-    } else {
-      clearInterval(timerInterval);
-      alert('Time is up! Take a break.');
-    }
-  }, 1000);
+  const timerEnd = Date.now() + POMODORO_SECONDS * 1000;
+  chrome.storage.local.set({ timerEnd }, () => {
+    chrome.alarms.create('pomodoro', { when: timerEnd });
+    clearInterval(timerInterval);
+    timerInterval = setInterval(renderTimer, 1000);
+    renderTimer();
+  });
 });
 
 document.getElementById('reset-timer').addEventListener('click', () => {
-  clearInterval(timerInterval);
-  timeLeft = 1500;
-  timerDisplay.textContent = '25:00';
+  chrome.alarms.clear('pomodoro');
+  chrome.storage.local.set({ timerEnd: null }, renderTimer);
 });
 
-// Task Manager
+chrome.storage.local.get({ timerEnd: null }, ({ timerEnd }) => {
+  if (timerEnd) timerInterval = setInterval(renderTimer, 1000);
+  renderTimer();
+});
+
+// ---------- Task Manager ----------
 const taskList = document.getElementById('task-list');
-document.getElementById('add-task').addEventListener('click', () => {
-  const taskInput = document.getElementById('new-task');
-  if (taskInput.value) {
-    const taskItem = document.createElement('li');
-    taskItem.textContent = taskInput.value;
-    taskList.appendChild(taskItem);
-    taskInput.value = '';
-  }
-});
-// Website Blocker Elements
-const blockedList = document.getElementById('blocked-list');
-const blockInput = document.getElementById('block-url');
-const blockButton = document.getElementById('block-site');
-const clearBlockedButton = document.getElementById('clear-blocked-list');
+const taskInput = document.getElementById('new-task');
 
-// Function to block a website
-blockButton.addEventListener('click', () => {
-  const blockUrl = blockInput.value.trim();
-  if (blockUrl) {
-    // Add the URL to the storage array
-    chrome.storage.sync.get({ blockedSites: [] }, (data) => {
-      // Prevent duplicate entries
-      if (!data.blockedSites.includes(blockUrl)) {
-        const updatedSites = [...data.blockedSites, blockUrl];
-        chrome.storage.sync.set({ blockedSites: updatedSites }, () => {
-          displayBlockedSites();
-          blockInput.value = ''; // Clear input field
-        });
-      } else {
-        alert("This site is already blocked.");
-      }
-    });
-  }
-});
+function saveTasks(tasks) {
+  chrome.storage.local.set({ tasks }, renderTasks);
+}
 
-// Function to display the list of blocked sites
-function displayBlockedSites() {
-  chrome.storage.sync.get({ blockedSites: [] }, (data) => {
-    // Clear the current list
-    blockedList.innerHTML = '';
-    // Populate the list with blocked sites
-    data.blockedSites.forEach((site) => {
-      const listItem = document.createElement('li');
-      listItem.textContent = site;
+function renderTasks() {
+  chrome.storage.local.get({ tasks: [] }, ({ tasks }) => {
+    taskList.innerHTML = '';
+    tasks.forEach((task, i) => {
+      const li = document.createElement('li');
 
-      // Add a "Remove" button for each site
-      const removeButton = document.createElement('button');
-      removeButton.textContent = 'Remove';
-      removeButton.style.marginLeft = '10px';
-      removeButton.addEventListener('click', () => {
-        removeBlockedSite(site);
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = task.done;
+      checkbox.addEventListener('change', () => {
+        tasks[i].done = checkbox.checked;
+        saveTasks(tasks);
       });
 
-      listItem.appendChild(removeButton);
-      blockedList.appendChild(listItem);
+      const label = document.createElement('span');
+      label.textContent = ' ' + task.text;
+      if (task.done) label.style.textDecoration = 'line-through';
+
+      const remove = document.createElement('button');
+      remove.textContent = 'Remove';
+      remove.style.marginLeft = '10px';
+      remove.addEventListener('click', () => {
+        tasks.splice(i, 1);
+        saveTasks(tasks);
+      });
+
+      li.append(checkbox, label, remove);
+      taskList.appendChild(li);
     });
   });
 }
 
-// Function to remove a specific blocked site
-function removeBlockedSite(site) {
-  chrome.storage.sync.get({ blockedSites: [] }, (data) => {
-    const updatedSites = data.blockedSites.filter((blockedSite) => blockedSite !== site);
-    chrome.storage.sync.set({ blockedSites: updatedSites }, displayBlockedSites);
+function addTask() {
+  const text = taskInput.value.trim();
+  if (!text) return;
+  chrome.storage.local.get({ tasks: [] }, ({ tasks }) => {
+    tasks.push({ text, done: false });
+    taskInput.value = '';
+    saveTasks(tasks);
   });
 }
 
-// Function to clear all blocked sites
-clearBlockedButton.addEventListener('click', () => {
-  chrome.storage.sync.set({ blockedSites: [] }, () => {
-    displayBlockedSites();
-    alert('All blocked sites have been cleared.');
+document.getElementById('add-task').addEventListener('click', addTask);
+taskInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') addTask();
+});
+
+// ---------- Website Blocker ----------
+const blockedList = document.getElementById('blocked-list');
+const blockInput = document.getElementById('block-url');
+
+// Accepts "https://www.youtube.com/watch?v=1" or "youtube.com" and returns "youtube.com"
+function normalizeSite(input) {
+  try {
+    const url = new URL(input.includes('://') ? input : 'https://' + input);
+    return url.hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+document.getElementById('block-site').addEventListener('click', () => {
+  const site = normalizeSite(blockInput.value.trim());
+  if (!site) return;
+  chrome.storage.sync.get({ blockedSites: [] }, ({ blockedSites }) => {
+    if (blockedSites.includes(site)) {
+      alert('This site is already blocked.');
+      return;
+    }
+    chrome.storage.sync.set({ blockedSites: [...blockedSites, site] }, () => {
+      displayBlockedSites();
+      blockInput.value = '';
+    });
   });
 });
 
-// Initial display of blocked sites on popup load
-displayBlockedSites();
+function displayBlockedSites() {
+  chrome.storage.sync.get({ blockedSites: [] }, ({ blockedSites }) => {
+    blockedList.innerHTML = '';
+    blockedSites.forEach((site) => {
+      const li = document.createElement('li');
+      li.textContent = site;
 
+      const remove = document.createElement('button');
+      remove.textContent = 'Remove';
+      remove.style.marginLeft = '10px';
+      remove.addEventListener('click', () => {
+        chrome.storage.sync.set(
+          { blockedSites: blockedSites.filter((s) => s !== site) },
+          displayBlockedSites
+        );
+      });
+
+      li.appendChild(remove);
+      blockedList.appendChild(li);
+    });
+  });
+}
+
+document.getElementById('clear-blocked-list').addEventListener('click', () => {
+  chrome.storage.sync.set({ blockedSites: [] }, displayBlockedSites);
+});
+
+renderTasks();
+displayBlockedSites();
