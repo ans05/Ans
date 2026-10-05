@@ -3,7 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "AFTERHOURS — an interactive design playground for animated album artwork and music visuals.",
+  "description": "AFTERHOURS \u2014 an interactive design playground for animated album artwork and music visuals.",
+  "engines": {
+    "node": ">=20.19"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
