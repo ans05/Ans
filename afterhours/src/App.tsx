@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAudioEngine } from './audio/useAudioEngine';
 import { ArtworkCanvas, type ArtworkCanvasHandle } from './canvas/ArtworkCanvas';
-import { designFileName, downloadBlob, downloadDesignJson, readDesignFile } from './design/file';
+import { designFileName, readDesignFile, saveBlob, saveDesignJson } from './design/file';
 import { loadPrefs, savePrefs, type UiPrefs } from './design/storage';
 import { audioMode } from './audio/mode';
 import { ModeBadge } from './editor/AudioSection';
@@ -50,8 +50,8 @@ export default function App() {
     setExporting(true);
     try {
       const blob = await renderPngBlob(design, frame);
-      downloadBlob(blob, designFileName(design, 'png'));
-      notify('info', 'Exported a 2048 × 2048 PNG.');
+      const outcome = await saveBlob(blob, designFileName(design, 'png'));
+      notify('info', outcome === 'saved' ? 'Exported a 2048 × 2048 PNG.' : 'Export cancelled.');
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Export failed.');
     } finally {
@@ -59,10 +59,10 @@ export default function App() {
     }
   }, [design, notify]);
 
-  const onSaveJson = useCallback(() => {
+  const onSaveJson = useCallback(async () => {
     try {
-      downloadDesignJson(design);
-      notify('info', 'Saved the design as JSON.');
+      const outcome = await saveDesignJson(design);
+      notify('info', outcome === 'saved' ? 'Saved the design as JSON.' : 'Save cancelled.');
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Save failed.');
     }
@@ -143,7 +143,7 @@ export default function App() {
             audio={audio}
             exporting={exporting}
             onExportPng={() => void onExportPng()}
-            onSaveJson={onSaveJson}
+            onSaveJson={() => void onSaveJson()}
             onLoadJson={(file) => void onLoadJson(file)}
             onReset={() => dispatch({ type: 'reset' })}
           />
