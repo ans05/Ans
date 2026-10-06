@@ -1,0 +1,25 @@
+# secrets
+.env
+*.pem
+*.tfvars
+!example.tfvars
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+# node
+node_modules/
+dist/
+coverage/
+# local data
+pgdata/
+media/audio/*
+!media/audio/.gitkeep
+.DS_Store
