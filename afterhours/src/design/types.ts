@@ -16,8 +16,8 @@
 export const DESIGN_SCHEMA = 'afterhours.design' as const;
 export const DESIGN_VERSION = 1 as const;
 
-export type PresetId = 'chrome' | 'current' | 'signal';
-export const PRESET_IDS: readonly PresetId[] = ['chrome', 'current', 'signal'];
+export type PresetId = 'chrome' | 'current' | 'signal' | 'tesseract';
+export const PRESET_IDS: readonly PresetId[] = ['chrome', 'current', 'signal', 'tesseract'];
 
 /** Normalised point in artwork space: (0,0) top-left, (1,1) bottom-right. */
 export interface Vec2 {

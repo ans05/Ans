@@ -98,9 +98,36 @@ export const PRESETS: Record<PresetId, PresetDefinition> = {
       { x: 0.08, y: 0.5 },
     ],
   },
+  tesseract: {
+    id: 'tesseract',
+    name: 'TESSERACT',
+    tagline: 'Hypercube, depth, time',
+    description: 'A four-dimensional cube rotating through the W axis, projected down to the sleeve.',
+    defaults: {
+      colors: { background: '#07070b', accent: '#c8ff3b' },
+      motion: { speed: 0.4, intensity: 0.55, texture: 0.25 },
+      titlePosition: { x: 0.5, y: 0.86 },
+    },
+    palette: {
+      backgrounds: ['#07070b', '#0a0812', '#060a0e', '#0d0b0a', '#0b0f14', '#100a14'],
+      accents: ['#c8ff3b', '#7af0ff', '#ff5ea8', '#ffd166', '#b9a5ff', '#f1ecdf'],
+    },
+    motionRanges: { speed: [0.2, 0.7], intensity: [0.3, 0.95], texture: [0.1, 0.5] },
+    titleAnchors: [
+      { x: 0.5, y: 0.86 },
+      { x: 0.5, y: 0.12 },
+      { x: 0.5, y: 0.9 },
+      { x: 0.5, y: 0.5 },
+    ],
+  },
 };
 
-export const PRESET_LIST: readonly PresetDefinition[] = [PRESETS.chrome, PRESETS.current, PRESETS.signal];
+export const PRESET_LIST: readonly PresetDefinition[] = [
+  PRESETS.chrome,
+  PRESETS.current,
+  PRESETS.signal,
+  PRESETS.tesseract,
+];
 
 export interface RandomizedLook {
   colors: DesignColors;
