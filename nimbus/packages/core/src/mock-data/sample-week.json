@@ -1,0 +1,114 @@
+{
+  "user": {
+    "id": "demo-user",
+    "name": "Jordan Lee",
+    "firstName": "Jordan",
+    "homeTimeZone": "America/Los_Angeles",
+    "workday": { "startHour": 9, "endHour": 18 }
+  },
+  "trip": {
+    "id": "trip-london-oct",
+    "userId": "demo-user",
+    "name": "London partner week",
+    "origin": { "name": "San Francisco", "code": "SFO", "timeZone": "America/Los_Angeles" },
+    "destination": { "name": "London", "code": "LHR", "timeZone": "Europe/London" },
+    "start": "2026-10-13T23:00:00Z",
+    "end": "2026-10-17T22:25:00Z"
+  },
+  "days": [
+    { "date": "2026-10-12", "timeZone": "America/Los_Angeles", "location": "San Francisco" },
+    { "date": "2026-10-13", "timeZone": "America/Los_Angeles", "location": "San Francisco" },
+    { "date": "2026-10-14", "timeZone": "Europe/London", "location": "London" },
+    { "date": "2026-10-15", "timeZone": "Europe/London", "location": "London" },
+    { "date": "2026-10-16", "timeZone": "Europe/London", "location": "London" },
+    { "date": "2026-10-17", "timeZone": "Europe/London", "location": "London → San Francisco" },
+    { "date": "2026-10-18", "timeZone": "America/Los_Angeles", "location": "San Francisco" }
+  ],
+  "segments": [
+    {
+      "id": "ride-out", "tripId": "trip-london-oct", "kind": "ride",
+      "start": "2026-10-13T23:00:00Z", "end": "2026-10-13T23:50:00Z",
+      "from": "Home", "to": "SFO", "mode": "car", "timeZone": "America/Los_Angeles", "connectivity": "mobile"
+    },
+    {
+      "id": "airport-sfo-out", "tripId": "trip-london-oct", "kind": "airport",
+      "start": "2026-10-13T23:50:00Z", "end": "2026-10-14T02:05:00Z",
+      "place": { "name": "San Francisco International", "code": "SFO", "timeZone": "America/Los_Angeles" },
+      "phase": "departure", "flightId": "ba285", "connectivity": "wifi"
+    },
+    {
+      "id": "ba285", "tripId": "trip-london-oct", "kind": "flight",
+      "start": "2026-10-14T02:05:00Z", "end": "2026-10-14T12:40:00Z",
+      "carrier": "BA", "flightNumber": "285",
+      "from": { "name": "San Francisco", "code": "SFO", "timeZone": "America/Los_Angeles" },
+      "to": { "name": "London Heathrow", "code": "LHR", "timeZone": "Europe/London" },
+      "airportMinutesBefore": 120, "connectivity": "offline"
+    },
+    {
+      "id": "airport-lhr-in", "tripId": "trip-london-oct", "kind": "airport",
+      "start": "2026-10-14T12:40:00Z", "end": "2026-10-14T13:30:00Z",
+      "place": { "name": "London Heathrow", "code": "LHR", "timeZone": "Europe/London" },
+      "phase": "arrival", "flightId": "ba285", "connectivity": "wifi"
+    },
+    {
+      "id": "ride-in", "tripId": "trip-london-oct", "kind": "ride",
+      "start": "2026-10-14T13:30:00Z", "end": "2026-10-14T14:30:00Z",
+      "from": "Heathrow", "to": "Hotel, Shoreditch", "mode": "train", "timeZone": "Europe/London", "connectivity": "mobile"
+    },
+    {
+      "id": "ride-ret-out", "tripId": "trip-london-oct", "kind": "ride",
+      "start": "2026-10-17T06:55:00Z", "end": "2026-10-17T07:45:00Z",
+      "from": "Hotel", "to": "Heathrow", "mode": "car", "timeZone": "Europe/London", "connectivity": "mobile"
+    },
+    {
+      "id": "airport-lhr-out", "tripId": "trip-london-oct", "kind": "airport",
+      "start": "2026-10-17T07:45:00Z", "end": "2026-10-17T10:00:00Z",
+      "place": { "name": "London Heathrow", "code": "LHR", "timeZone": "Europe/London" },
+      "phase": "departure", "flightId": "ba287", "connectivity": "wifi"
+    },
+    {
+      "id": "ba287", "tripId": "trip-london-oct", "kind": "flight",
+      "start": "2026-10-17T10:00:00Z", "end": "2026-10-17T21:05:00Z",
+      "carrier": "BA", "flightNumber": "287",
+      "from": { "name": "London Heathrow", "code": "LHR", "timeZone": "Europe/London" },
+      "to": { "name": "San Francisco", "code": "SFO", "timeZone": "America/Los_Angeles" },
+      "airportMinutesBefore": 120, "connectivity": "offline"
+    },
+    {
+      "id": "airport-sfo-in", "tripId": "trip-london-oct", "kind": "airport",
+      "start": "2026-10-17T21:05:00Z", "end": "2026-10-17T21:40:00Z",
+      "place": { "name": "San Francisco International", "code": "SFO", "timeZone": "America/Los_Angeles" },
+      "phase": "arrival", "flightId": "ba287", "connectivity": "wifi"
+    },
+    {
+      "id": "ride-home", "tripId": "trip-london-oct", "kind": "ride",
+      "start": "2026-10-17T21:40:00Z", "end": "2026-10-17T22:25:00Z",
+      "from": "SFO", "to": "Home", "mode": "car", "timeZone": "America/Los_Angeles", "connectivity": "mobile"
+    }
+  ],
+  "meetings": [
+    { "id": "m-standup-mon", "title": "Team standup", "start": "2026-10-12T16:30:00Z", "end": "2026-10-12T17:00:00Z", "scheduledTimeZone": "America/Los_Angeles", "organizer": "Maya Chen", "recurring": true },
+    { "id": "m-roadmap", "title": "Roadmap sync", "start": "2026-10-12T20:00:00Z", "end": "2026-10-12T21:00:00Z", "scheduledTimeZone": "America/Los_Angeles", "organizer": "Daniel Ortiz" },
+    { "id": "m-standup-tue", "title": "Team standup", "start": "2026-10-13T16:30:00Z", "end": "2026-10-13T17:00:00Z", "scheduledTimeZone": "America/Los_Angeles", "organizer": "Maya Chen", "recurring": true },
+    { "id": "m-design-review", "title": "Onboarding design review", "start": "2026-10-13T18:00:00Z", "end": "2026-10-13T19:00:00Z", "scheduledTimeZone": "America/Los_Angeles", "organizer": "Priya Natarajan" },
+    { "id": "m-1on1", "title": "1:1 with Daniel", "start": "2026-10-13T20:30:00Z", "end": "2026-10-13T21:00:00Z", "scheduledTimeZone": "America/Los_Angeles", "organizer": "Daniel Ortiz", "recurring": true },
+    { "id": "m-client-intro", "title": "Intro call · Hartwell Group", "start": "2026-10-14T15:00:00Z", "end": "2026-10-14T15:30:00Z", "scheduledTimeZone": "Europe/London", "organizer": "James Whitfield" },
+    { "id": "m-product-review", "title": "Weekly product review", "start": "2026-10-14T21:30:00Z", "end": "2026-10-14T22:30:00Z", "scheduledTimeZone": "America/Los_Angeles", "organizer": "Maya Chen", "recurring": true },
+    { "id": "m-workshop", "title": "Partner workshop · Hartwell Group", "start": "2026-10-15T09:00:00Z", "end": "2026-10-15T11:00:00Z", "scheduledTimeZone": "Europe/London", "organizer": "James Whitfield", "location": "1 Finsbury Avenue" },
+    { "id": "m-standup-thu", "title": "Team standup", "start": "2026-10-15T16:30:00Z", "end": "2026-10-15T17:00:00Z", "scheduledTimeZone": "America/Los_Angeles", "organizer": "Maya Chen", "recurring": true },
+    { "id": "m-data-sync", "title": "Analytics sync", "start": "2026-10-15T22:00:00Z", "end": "2026-10-15T22:30:00Z", "scheduledTimeZone": "America/Los_Angeles", "organizer": "Sam Rivera" },
+    { "id": "m-coffee", "title": "Coffee with Amara", "start": "2026-10-16T08:00:00Z", "end": "2026-10-16T08:45:00Z", "scheduledTimeZone": "Europe/London", "organizer": "Amara Okafor", "location": "Ozone Coffee, Shoreditch" },
+    { "id": "m-hiring-debrief", "title": "Hiring panel debrief", "start": "2026-10-16T23:30:00Z", "end": "2026-10-17T00:00:00Z", "scheduledTimeZone": "America/Los_Angeles", "organizer": "Daniel Ortiz" }
+  ],
+  "tasks": [
+    { "id": "t-q3-narrative", "title": "Draft the Q3 product narrative", "estimatedMinutes": 120, "mode": "deep", "needsConnectivity": false, "priority": "high", "offlinePrep": ["Export the Q3 metrics dashboard to PDF", "Download last quarter's narrative doc"], "assignedWindowId": "fw-tue-flight" },
+    { "id": "t-workshop-slides", "title": "Finish partner workshop slides", "estimatedMinutes": 90, "mode": "deep", "needsConnectivity": false, "priority": "high", "offlinePrep": ["Save the workshop deck for offline editing", "Download Hartwell's brief"], "assignedWindowId": "fw-tue-flight" },
+    { "id": "t-prd-review", "title": "Review the onboarding PRD", "estimatedMinutes": 45, "mode": "deep", "needsConnectivity": false, "priority": "medium", "offlinePrep": ["Download the onboarding PRD"], "assignedWindowId": null },
+    { "id": "t-inbox", "title": "Clear inbox to zero", "estimatedMinutes": 25, "mode": "quick", "needsConnectivity": true, "priority": "medium", "assignedWindowId": null },
+    { "id": "t-expenses", "title": "File London trip expenses", "estimatedMinutes": 20, "mode": "quick", "needsConnectivity": true, "priority": "low", "assignedWindowId": null },
+    { "id": "t-paper", "title": "Read “Measuring product-market fit”", "estimatedMinutes": 40, "mode": "deep", "needsConnectivity": false, "priority": "low", "offlinePrep": ["Download the paper as PDF"], "assignedWindowId": null },
+    { "id": "t-recruiters", "title": "Reply to recruiter threads", "estimatedMinutes": 15, "mode": "quick", "needsConnectivity": true, "priority": "low", "assignedWindowId": null },
+    { "id": "t-interviews", "title": "Annotate user interview notes", "estimatedMinutes": 60, "mode": "deep", "needsConnectivity": false, "priority": "medium", "offlinePrep": ["Download the interview transcripts"], "assignedWindowId": null },
+    { "id": "t-dashboard", "title": "Update the metrics dashboard", "estimatedMinutes": 30, "mode": "quick", "needsConnectivity": true, "priority": "medium", "assignedWindowId": null }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "focusWindows": [
+    { "id": "fw-tue-ride", "tripId": "trip-london-oct", "segmentId": "ride-out", "context": "ride", "connectivity": "mobile", "mode": "quick", "start": "2026-10-13T23:00:00Z", "end": "2026-10-13T23:50:00Z", "durationMinutes": 50, "timeZone": "America/Los_Angeles", "title": "Car to SFO" },
+    { "id": "fw-tue-gate", "tripId": "trip-london-oct", "segmentId": "airport-sfo-out", "context": "gate", "connectivity": "wifi", "mode": "quick", "start": "2026-10-14T00:30:00Z", "end": "2026-10-14T01:25:00Z", "durationMinutes": 55, "timeZone": "America/Los_Angeles", "title": "Gate at SFO" },
+    { "id": "fw-tue-flight", "tripId": "trip-london-oct", "segmentId": "ba285", "context": "flight", "connectivity": "offline", "mode": "deep", "start": "2026-10-14T02:05:00Z", "end": "2026-10-14T12:40:00Z", "durationMinutes": 635, "timeZone": "America/Los_Angeles", "title": "BA 285 to London" },
+    { "id": "fw-wed-ride", "tripId": "trip-london-oct", "segmentId": "ride-in", "context": "ride", "connectivity": "mobile", "mode": "quick", "start": "2026-10-14T13:30:00Z", "end": "2026-10-14T14:30:00Z", "durationMinutes": 60, "timeZone": "Europe/London", "title": "Heathrow to the hotel" },
+    { "id": "fw-sat-ride", "tripId": "trip-london-oct", "segmentId": "ride-ret-out", "context": "ride", "connectivity": "mobile", "mode": "quick", "start": "2026-10-17T06:55:00Z", "end": "2026-10-17T07:45:00Z", "durationMinutes": 50, "timeZone": "Europe/London", "title": "Car to Heathrow" },
+    { "id": "fw-sat-gate", "tripId": "trip-london-oct", "segmentId": "airport-lhr-out", "context": "gate", "connectivity": "wifi", "mode": "quick", "start": "2026-10-17T08:20:00Z", "end": "2026-10-17T09:20:00Z", "durationMinutes": 60, "timeZone": "Europe/London", "title": "Gate at Heathrow" },
+    { "id": "fw-sat-flight", "tripId": "trip-london-oct", "segmentId": "ba287", "context": "flight", "connectivity": "offline", "mode": "deep", "start": "2026-10-17T10:00:00Z", "end": "2026-10-17T21:05:00Z", "durationMinutes": 665, "timeZone": "Europe/London", "title": "BA 287 to San Francisco" },
+    { "id": "fw-sat-ride-home", "tripId": "trip-london-oct", "segmentId": "ride-home", "context": "ride", "connectivity": "mobile", "mode": "quick", "start": "2026-10-17T21:40:00Z", "end": "2026-10-17T22:25:00Z", "durationMinutes": 45, "timeZone": "America/Los_Angeles", "title": "SFO to home" }
+  ],
+  "shieldFlags": [
+    { "meetingId": "m-product-review", "localTimeZone": "Europe/London", "reason": "late-night", "suggestedStart": "2026-10-15T15:00:00Z", "suggestedEnd": "2026-10-15T16:00:00Z" },
+    { "meetingId": "m-data-sync", "localTimeZone": "Europe/London", "reason": "late-night", "suggestedStart": "2026-10-16T15:30:00Z", "suggestedEnd": "2026-10-16T16:00:00Z" },
+    { "meetingId": "m-hiring-debrief", "localTimeZone": "Europe/London", "reason": "overnight", "suggestedStart": "2026-10-16T16:00:00Z", "suggestedEnd": "2026-10-16T16:30:00Z" }
+  ],
+  "standardPrepItems": [
+    "Download your boarding pass",
+    "Download offline maps for London",
+    "Charge laptop and headphones"
+  ]
+}

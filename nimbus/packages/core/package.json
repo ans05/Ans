@@ -1,0 +1,19 @@
+{
+  "name": "@nimbus/core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Nimbus domain: types, time helpers, algorithms and mock data. Pure TypeScript, runs in the browser and in Lambda.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  }
+}

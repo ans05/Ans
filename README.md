@@ -1,7 +1,11 @@
 # Ans
 
-Two projects live in this repository:
+Three projects live in this repository:
 
+- **`nimbus/`** — [Nimbus](nimbus/README.md), a calm travel-and-productivity
+  companion (Next.js, TypeScript, Tailwind, AWS CDK). One timeline for a trip and
+  a calendar, focus windows inside travel, a time-zone shield and an offline prep
+  checklist. Runs fully on mock data; see its README.
 - **`afterhours/`** — [AFTERHOURS](afterhours/README.md), an interactive design
   playground for animated album artwork and music visuals (React, TypeScript,
   Vite, Canvas 2D, Web Audio). See its README for startup instructions and an
@@ -9,6 +13,14 @@ Two projects live in this repository:
 - **Root files** (`manifest.json`, `popup.*`, `background.js`) — *Spotlight
   Productivity*, a Chrome extension with a Pomodoro timer, task list and website
   blocker. Load it unpacked from this folder via `chrome://extensions`.
+
+Quick start for Nimbus:
+
+```bash
+cd nimbus
+npm install
+npm run dev
+```
 
 Quick start for AFTERHOURS:
 

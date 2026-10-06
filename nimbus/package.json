@@ -1,0 +1,30 @@
+{
+  "name": "nimbus",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Nimbus — a calm travel-and-productivity companion. Monorepo: web app, core domain, API, infra.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @nimbus/web",
+    "build": "npm run build -w @nimbus/web",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "lint": "npm run lint -ws --if-present",
+    "test": "npm run test -ws --if-present",
+    "check": "npm run typecheck && npm run lint && npm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.15.0",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}
