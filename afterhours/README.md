@@ -35,8 +35,8 @@ npm run lint       # eslint
 ## What you can do
 
 - Edit the artist name and album title.
-- Switch between **CHROME**, **CURRENT** and **SIGNAL**. Your words are kept;
-  the look changes.
+- Switch between **CHROME**, **CURRENT**, **SIGNAL** and **TESSERACT**. Your
+  words are kept; the look changes.
 - **Randomize** inside the current preset's style. Each result is reproducible
   from the `seed` stored in the design.
 - Change the background and accent colours (picker or hex).
@@ -94,6 +94,14 @@ gives the same shapes, which is what makes a saved design reproducible.
 - **SIGNAL** stacks oscilloscope traces. Each row is a bell-shaped envelope
   (a Gaussian in x) multiplied by a signal, painted back to front with an
   opaque fill beneath each line so nearer traces occlude the ones behind.
+- **TESSERACT** is a real four-dimensional cube: 16 vertices at (±1, ±1, ±1,
+  ±1) joined by the 32 edges that differ in one coordinate. Each frame the
+  vertices are rotated in the XW, YW and ZW planes (rotations no 3D object
+  can make), projected 4D → 3D by dividing by distance along W, then 3D → 2D
+  with an ordinary perspective divide. Edges are sorted by depth so near
+  lines paint over far ones. The page itself gains depth too: the artwork
+  tilts a few degrees toward the pointer and a perspective grid recedes
+  behind the studio.
 
 Smoothness comes from **3D simplex noise** (`lib/noise.ts`): x and y pick the
 point on the shape and z is time, so every outline evolves continuously

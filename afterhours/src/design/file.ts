@@ -18,7 +18,31 @@ export function serializeDesign(design: DesignState): string {
   return JSON.stringify(design, null, 2);
 }
 
-export function downloadBlob(blob: Blob, filename: string): void {
+export type SaveOutcome = 'saved' | 'declined';
+
+/**
+ * Some hosts (for example a claude.ai artifact viewer) block page-initiated
+ * downloads and instead expose a save hook on `window.claude`. When that hook
+ * answers, the file goes through it; otherwise we fall back to a plain
+ * browser download. The app never depends on the hook being present.
+ */
+interface HostSaveHook {
+  save(request: { filename: string; data: Blob }): Promise<unknown>;
+}
+
+async function hostSaveHook(): Promise<HostSaveHook | null> {
+  const w = window as unknown as { claude?: { use?: (name: string) => Promise<unknown> } };
+  const use = w.claude?.use;
+  if (typeof use !== 'function') return null;
+  try {
+    const ns = (await use.call(w.claude, 'downloads')) as Partial<HostSaveHook> | null;
+    return ns && typeof ns.save === 'function' ? (ns as HostSaveHook) : null;
+  } catch {
+    return null;
+  }
+}
+
+function browserDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -31,9 +55,26 @@ export function downloadBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function downloadDesignJson(design: DesignState): void {
+/** Hand a file to the user. Resolves 'declined' when a host prompt was refused. */
+export async function saveBlob(blob: Blob, filename: string): Promise<SaveOutcome> {
+  const hook = await hostSaveHook();
+  if (hook) {
+    try {
+      await hook.save({ filename, data: blob });
+      return 'saved';
+    } catch (err) {
+      const code = (err as { code?: string } | null)?.code;
+      if (code === 'declined') return 'declined';
+      throw new Error(`The host refused the save (${code ?? 'unknown error'}).`);
+    }
+  }
+  browserDownload(blob, filename);
+  return 'saved';
+}
+
+export function saveDesignJson(design: DesignState): Promise<SaveOutcome> {
   const blob = new Blob([serializeDesign(design)], { type: 'application/json' });
-  downloadBlob(blob, designFileName(design, 'json'));
+  return saveBlob(blob, designFileName(design, 'json'));
 }
 
 export async function readDesignFile(file: File): Promise<ParseResult> {

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
 import { useAudioEngine } from './audio/useAudioEngine';
 import { ArtworkCanvas, type ArtworkCanvasHandle } from './canvas/ArtworkCanvas';
-import { designFileName, downloadBlob, downloadDesignJson, readDesignFile } from './design/file';
+import { designFileName, readDesignFile, saveBlob, saveDesignJson } from './design/file';
 import { loadPrefs, savePrefs, type UiPrefs } from './design/storage';
 import { audioMode } from './audio/mode';
 import { ModeBadge } from './editor/AudioSection';
@@ -50,8 +50,8 @@ export default function App() {
     setExporting(true);
     try {
       const blob = await renderPngBlob(design, frame);
-      downloadBlob(blob, designFileName(design, 'png'));
-      notify('info', 'Exported a 2048 × 2048 PNG.');
+      const outcome = await saveBlob(blob, designFileName(design, 'png'));
+      notify('info', outcome === 'saved' ? 'Exported a 2048 × 2048 PNG.' : 'Export cancelled.');
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Export failed.');
     } finally {
@@ -59,10 +59,10 @@ export default function App() {
     }
   }, [design, notify]);
 
-  const onSaveJson = useCallback(() => {
+  const onSaveJson = useCallback(async () => {
     try {
-      downloadDesignJson(design);
-      notify('info', 'Saved the design as JSON.');
+      const outcome = await saveDesignJson(design);
+      notify('info', outcome === 'saved' ? 'Saved the design as JSON.' : 'Save cancelled.');
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Save failed.');
     }
@@ -94,15 +94,39 @@ export default function App() {
 
   const mode = audioMode(audio.snapshot.status);
 
+  // Page depth: the artwork tilts a few degrees toward the pointer, like a
+  // sleeve held up to the light. Off while dragging, under reduced motion,
+  // and on touch devices (the CSS gates the hover case).
+  const frameRef = useRef<HTMLDivElement>(null);
+  const onStagePointerMove = useCallback(
+    (e: PointerEvent<HTMLDivElement>) => {
+      const el = frameRef.current;
+      if (!el || reduceMotion || e.buttons !== 0 || e.pointerType === 'touch') return;
+      const r = el.getBoundingClientRect();
+      const nx = (e.clientX - r.left) / r.width - 0.5;
+      const ny = (e.clientY - r.top) / r.height - 0.5;
+      el.style.setProperty('--tilt-x', `${(-ny * 7).toFixed(2)}deg`);
+      el.style.setProperty('--tilt-y', `${(nx * 9).toFixed(2)}deg`);
+    },
+    [reduceMotion],
+  );
+  const onStagePointerLeave = useCallback(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    el.style.setProperty('--tilt-x', '0deg');
+    el.style.setProperty('--tilt-y', '0deg');
+  }, []);
+
   return (
     <div className="app">
+      <div className="depth-grid" aria-hidden="true" />
       <a className="skip-link" href="#editor">
         Skip to editor
       </a>
       <header className="masthead">
         <h1 className="masthead__title">AFTERHOURS</h1>
         <div className="masthead__meta">
-          <span>Animated artwork studio</span>
+          <span>4D artwork studio</span>
           <span>No. 001</span>
           <span>{ISSUE_DATE}</span>
         </div>
@@ -114,6 +138,12 @@ export default function App() {
             <span className="eyebrow">Artwork · {design.preset}</span>
             <ModeBadge mode={mode} fileName={audio.snapshot.fileName} />
           </div>
+          <div
+            ref={frameRef}
+            className="stage__frame"
+            onPointerMove={onStagePointerMove}
+            onPointerLeave={onStagePointerLeave}
+          >
           <ArtworkCanvas
             ref={canvasRef}
             design={design}
@@ -124,6 +154,7 @@ export default function App() {
             onNudgeTitle={(dx, dy) => dispatch({ type: 'nudge-title', dx, dy })}
             onToggleAnimating={toggleAnimating}
           />
+          </div>
           <p className="stage__hint">
             Drag the title to move it. Arrow keys nudge, Shift for larger steps, Space plays or pauses.
             {reduceMotion ? ' Reduced motion is on.' : ''}
@@ -143,7 +174,7 @@ export default function App() {
             audio={audio}
             exporting={exporting}
             onExportPng={() => void onExportPng()}
-            onSaveJson={onSaveJson}
+            onSaveJson={() => void onSaveJson()}
             onLoadJson={(file) => void onLoadJson(file)}
             onReset={() => dispatch({ type: 'reset' })}
           />
@@ -152,7 +183,7 @@ export default function App() {
 
       <footer className="colophon">
         <span>Design rev. {design.revision} · saved in this browser</span>
-        <span>Procedural graphics · Web Audio analysis · no uploads</span>
+        <span>Procedural graphics · 4D projection · Web Audio analysis · no uploads</span>
       </footer>
 
       <div className="notice-area" aria-live="polite">

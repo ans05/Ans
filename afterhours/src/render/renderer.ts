@@ -11,6 +11,7 @@ import type { DesignState } from '../design/types';
 import { chromeScene } from './scenes/chrome';
 import { currentScene } from './scenes/current';
 import { signalScene } from './scenes/signal';
+import { tesseractScene } from './scenes/tesseract';
 import { drawGrain } from './texture';
 import { drawTypography } from './typography';
 import type { FrameInput, RenderOutput, SceneContext, SceneRenderer } from './types';
@@ -19,6 +20,7 @@ const SCENES: Record<DesignState['preset'], SceneRenderer> = {
   chrome: chromeScene,
   current: currentScene,
   signal: signalScene,
+  tesseract: tesseractScene,
 };
 
 const noiseCache = new Map<number, ReturnType<typeof createNoise3>>();

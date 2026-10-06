@@ -71,7 +71,83 @@ export function drawTypography(sc: SceneContext): NormBounds {
       return drawCurrentType(sc);
     case 'signal':
       return drawSignalType(sc);
+    case 'tesseract':
+      return drawTesseractType(sc);
   }
+}
+
+/* --------------------------------------------------------------- TESSERACT */
+
+function drawTesseractType(sc: SceneContext): NormBounds {
+  const { ctx, size, design, frame } = sc;
+  const title = design.text.title.toUpperCase();
+  const artist = design.text.artist.toUpperCase();
+  const maxWidth = size * 0.84;
+  const titleFont = (px: number) => `400 ${px}px ${FONT_DISPLAY}`;
+  const tracking = 0.08;
+  const measure = (px: number, text: string) => {
+    ctx.font = titleFont(px);
+    ctx.letterSpacing = `${px * tracking}px`;
+    const w = ctx.measureText(text).width;
+    ctx.letterSpacing = '0px';
+    return w;
+  };
+  let titleSize = size * 0.1;
+  for (let i = 0; i < 20; i++) {
+    const w = measure(titleSize, title);
+    if (w <= maxWidth || titleSize <= 8) break;
+    titleSize = Math.max(8, titleSize * Math.min(0.92, maxWidth / w));
+  }
+  const artistSize = clamp(size * 0.02, 9, size * 0.026);
+  const gap = titleSize * 0.5;
+  const blockH = titleSize + gap + artistSize;
+  const cx = design.layout.titlePosition.x * size;
+  const cy = design.layout.titlePosition.y * size;
+  const top = cy - blockH / 2;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  // Title: wide-tracked, flat ink, with a projected "shadow" copy offset along the W axis.
+  const depth = (frame.reducedMotion ? 0.3 : 1) * titleSize * 0.06 * (0.6 + frame.audio.bass);
+  ctx.font = titleFont(titleSize);
+  ctx.letterSpacing = `${titleSize * tracking}px`;
+  const titleWidth = ctx.measureText(title).width;
+  const baseline = top + titleSize * 0.85;
+  ctx.fillStyle = rgba(design.colors.accent, 0.5);
+  ctx.fillText(title, cx + depth, baseline - depth);
+  ctx.fillStyle = sc.ink;
+  ctx.fillText(title, cx, baseline);
+  ctx.letterSpacing = '0px';
+
+  // Artist with bracket rules, like an axis label.
+  let artistWidth = 0;
+  if (artist) {
+    ctx.font = `700 ${artistSize}px ${FONT_MONO}`;
+    ctx.letterSpacing = `${artistSize * 0.3}px`;
+    artistWidth = ctx.measureText(artist).width;
+    const y = top + titleSize + gap + artistSize * 0.8;
+    ctx.fillStyle = design.colors.accent;
+    ctx.fillText(artist, cx, y);
+    ctx.letterSpacing = '0px';
+    ctx.strokeStyle = rgba(sc.ink, 0.4);
+    ctx.lineWidth = Math.max(1, size * 0.0012);
+    const bx = artistWidth / 2 + artistSize;
+    const bh = artistSize * 0.9;
+    ctx.beginPath();
+    ctx.moveTo(cx - bx + artistSize * 0.4, y - bh);
+    ctx.lineTo(cx - bx, y - bh);
+    ctx.lineTo(cx - bx, y + artistSize * 0.25);
+    ctx.lineTo(cx - bx + artistSize * 0.4, y + artistSize * 0.25);
+    ctx.moveTo(cx + bx - artistSize * 0.4, y - bh);
+    ctx.lineTo(cx + bx, y - bh);
+    ctx.lineTo(cx + bx, y + artistSize * 0.25);
+    ctx.lineTo(cx + bx - artistSize * 0.4, y + artistSize * 0.25);
+    ctx.stroke();
+  }
+  ctx.restore();
+  const w = Math.max(titleWidth, artistWidth + artistSize * 2) / size;
+  return { x: cx / size - w / 2, y: top / size, w, h: blockH / size };
 }
 
 /* ------------------------------------------------------------------ CHROME */

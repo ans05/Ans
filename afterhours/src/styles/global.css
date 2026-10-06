@@ -91,6 +91,52 @@ body::before {
   z-index: 1;
 }
 
+/* A receding perspective plane behind the whole studio: the page has depth. */
+.depth-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  perspective: 900px;
+  perspective-origin: 50% 35%;
+  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.9) 45%, rgba(0, 0, 0, 0.25) 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.9) 45%, rgba(0, 0, 0, 0.25) 100%);
+}
+.depth-grid::before {
+  content: '';
+  position: absolute;
+  left: -50%;
+  top: 30%;
+  width: 200%;
+  height: 160%;
+  transform-origin: 50% 0;
+  transform: rotateX(72deg);
+  background-image:
+    linear-gradient(to right, rgba(200, 255, 59, 0.11) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(241, 236, 223, 0.09) 1px, transparent 1px);
+  background-size: 96px 96px;
+  animation: depth-scroll 14s linear infinite;
+}
+@keyframes depth-scroll {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 0 0, 0 96px; }
+}
+
+.stage__frame {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  transform-style: preserve-3d;
+  transform: perspective(1400px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+@media (hover: none) {
+  .stage__frame {
+    transform: none;
+  }
+}
+
 h1,
 h2,
 p {
@@ -532,7 +578,7 @@ output {
 /* presets */
 .presets {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 .preset {
@@ -548,7 +594,7 @@ output {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-height: 74px;
+  min-height: 64px;
   padding: 12px 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -879,5 +925,11 @@ output {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+  .depth-grid::before {
+    animation: none;
+  }
+  .stage__frame {
+    transform: none;
   }
 }
