@@ -1,6 +1,11 @@
 # Ans
 
-Two projects live in this repository:
+Three projects live in this repository:
+
+- **`nimbus/`** — [Nimbus](nimbus/README.md), a calm travel-and-productivity
+  companion: one timeline for travel and work, usable focus windows, a
+  time-zone shield, offline prep and a leave-now card (Next.js, TypeScript,
+  Tailwind, AWS CDK). See its README for how to run it locally without AWS.
 
 - **`afterhours/`** — [AFTERHOURS](afterhours/README.md), an interactive design
   playground for animated album artwork and music visuals (React, TypeScript,
@@ -14,6 +19,14 @@ Quick start for AFTERHOURS:
 
 ```bash
 cd afterhours
+npm install
+npm run dev
+```
+
+Quick start for Nimbus:
+
+```bash
+cd nimbus
 npm install
 npm run dev
 ```

@@ -1,0 +1,21 @@
+{
+  "name": "nimbus-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Nimbus — a calm travel-and-productivity companion.",
+  "engines": {
+    "node": ">=20.9"
+  },
+  "workspaces": [
+    "packages/core",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "check": "npm run typecheck && npm run lint && npm run test"
+  }
+}

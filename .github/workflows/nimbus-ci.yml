@@ -1,0 +1,32 @@
+name: Nimbus CI
+
+on:
+  pull_request:
+    paths:
+      - 'nimbus/**'
+      - '.github/workflows/nimbus-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'nimbus/**'
+      - '.github/workflows/nimbus-ci.yml'
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nimbus
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: nimbus/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+        env:
+          NIMBUS_MODE: mock

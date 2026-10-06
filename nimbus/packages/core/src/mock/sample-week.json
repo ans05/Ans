@@ -1,0 +1,97 @@
+{
+  "demoNow": "2026-10-13T08:45:00-07:00",
+  "weekStart": "2026-10-12",
+  "user": {
+    "id": "user-demo",
+    "name": "Alex",
+    "homeZone": "America/Los_Angeles",
+    "travelMinutesToAirport": 45
+  },
+  "trip": {
+    "id": "trip-ldn-oct",
+    "title": "London product offsite",
+    "homeCity": "San Francisco",
+    "homeZone": "America/Los_Angeles",
+    "destinationCity": "London",
+    "destinationZone": "Europe/London",
+    "start": "2026-10-13",
+    "end": "2026-10-17",
+    "days": [
+      { "date": "2026-10-13", "zone": "America/Los_Angeles", "city": "San Francisco", "label": "Fly to London" },
+      { "date": "2026-10-14", "zone": "Europe/London", "city": "London", "label": "Arrive" },
+      { "date": "2026-10-15", "zone": "Europe/London", "city": "London", "label": "Offsite" },
+      { "date": "2026-10-16", "zone": "Europe/London", "city": "London", "label": "Offsite" },
+      { "date": "2026-10-17", "zone": "Europe/London", "city": "London", "label": "Fly home" }
+    ],
+    "flights": [
+      {
+        "id": "vs20",
+        "carrier": "Virgin Atlantic",
+        "number": "VS 20",
+        "from": { "code": "SFO", "city": "San Francisco", "zone": "America/Los_Angeles" },
+        "to": { "code": "LHR", "city": "London", "zone": "Europe/London" },
+        "departs": "2026-10-13T13:40:00-07:00",
+        "arrives": "2026-10-14T08:05:00+01:00",
+        "international": true,
+        "status": "on-time"
+      },
+      {
+        "id": "vs19",
+        "carrier": "Virgin Atlantic",
+        "number": "VS 19",
+        "from": { "code": "LHR", "city": "London", "zone": "Europe/London" },
+        "to": { "code": "SFO", "city": "San Francisco", "zone": "America/Los_Angeles" },
+        "departs": "2026-10-17T11:00:00+01:00",
+        "arrives": "2026-10-17T14:00:00-07:00",
+        "international": true,
+        "status": "scheduled"
+      }
+    ],
+    "travelBlocks": [
+      { "id": "ride-sfo", "kind": "ride", "title": "Ride to SFO", "subtitle": "45 min · cellular", "start": "2026-10-13T10:40:00-07:00", "end": "2026-10-13T11:25:00-07:00", "connectivity": "cellular", "focusable": true },
+      { "id": "sec-sfo", "kind": "security", "title": "Security", "subtitle": "International terminal", "start": "2026-10-13T11:25:00-07:00", "end": "2026-10-13T11:55:00-07:00", "connectivity": "cellular", "focusable": false },
+      { "id": "gate-a7", "kind": "gate", "title": "Gate A7", "subtitle": "Wi‑Fi · power at seats", "start": "2026-10-13T11:55:00-07:00", "end": "2026-10-13T13:10:00-07:00", "connectivity": "wifi", "focusable": true },
+      { "id": "board-vs20", "kind": "boarding", "title": "Boarding", "subtitle": "VS 20", "start": "2026-10-13T13:10:00-07:00", "end": "2026-10-13T13:40:00-07:00", "connectivity": "cellular", "focusable": false },
+      { "id": "flight-vs20", "kind": "flight", "title": "VS 20 to London", "subtitle": "SFO → LHR · 10h 25m · offline", "start": "2026-10-13T13:40:00-07:00", "end": "2026-10-14T08:05:00+01:00", "connectivity": "offline", "focusable": true, "flightId": "vs20" },
+      { "id": "train-hex", "kind": "train", "title": "Heathrow Express", "subtitle": "to Paddington · Wi‑Fi", "start": "2026-10-14T09:00:00+01:00", "end": "2026-10-14T09:20:00+01:00", "connectivity": "wifi", "focusable": true },
+      { "id": "hotel-checkin", "kind": "hotel", "title": "Hotel check-in", "subtitle": "Holborn", "start": "2026-10-14T10:00:00+01:00", "end": "2026-10-14T10:30:00+01:00", "connectivity": "cellular", "focusable": false },
+      { "id": "ride-lhr", "kind": "ride", "title": "Ride to Heathrow", "subtitle": "45 min · cellular", "start": "2026-10-17T07:30:00+01:00", "end": "2026-10-17T08:15:00+01:00", "connectivity": "cellular", "focusable": true },
+      { "id": "sec-lhr", "kind": "security", "title": "Security", "subtitle": "Terminal 3", "start": "2026-10-17T08:15:00+01:00", "end": "2026-10-17T08:50:00+01:00", "connectivity": "cellular", "focusable": false },
+      { "id": "gate-23", "kind": "gate", "title": "Gate 23", "subtitle": "Wi‑Fi", "start": "2026-10-17T08:50:00+01:00", "end": "2026-10-17T10:30:00+01:00", "connectivity": "wifi", "focusable": true },
+      { "id": "board-vs19", "kind": "boarding", "title": "Boarding", "subtitle": "VS 19", "start": "2026-10-17T10:30:00+01:00", "end": "2026-10-17T11:00:00+01:00", "connectivity": "cellular", "focusable": false },
+      { "id": "flight-vs19", "kind": "flight", "title": "VS 19 to San Francisco", "subtitle": "LHR → SFO · 11h · offline", "start": "2026-10-17T11:00:00+01:00", "end": "2026-10-17T14:00:00-07:00", "connectivity": "offline", "focusable": true, "flightId": "vs19" },
+      { "id": "ride-home", "kind": "ride", "title": "Ride home", "subtitle": "45 min · cellular", "start": "2026-10-17T14:30:00-07:00", "end": "2026-10-17T15:15:00-07:00", "connectivity": "cellular", "focusable": true }
+    ]
+  },
+  "meetings": [
+    { "id": "m-standup-mon", "title": "Team standup", "start": "2026-10-12T09:00:00-07:00", "end": "2026-10-12T09:15:00-07:00", "zone": "America/Los_Angeles", "kind": "meeting", "organizer": "Priya", "movable": false },
+    { "id": "m-metrics-prep", "title": "Q3 metrics prep", "start": "2026-10-12T10:00:00-07:00", "end": "2026-10-12T11:30:00-07:00", "zone": "America/Los_Angeles", "kind": "task-block", "movable": true },
+    { "id": "m-design-review", "title": "Design review", "start": "2026-10-12T14:00:00-07:00", "end": "2026-10-12T15:00:00-07:00", "zone": "America/Los_Angeles", "kind": "meeting", "organizer": "Marco", "attendees": ["Marco", "Lena"], "movable": true },
+    { "id": "m-standup-tue", "title": "Team standup", "start": "2026-10-13T09:00:00-07:00", "end": "2026-10-13T09:15:00-07:00", "zone": "America/Los_Angeles", "kind": "meeting", "organizer": "Priya", "movable": false },
+    { "id": "m-1on1-priya", "title": "1:1 with Priya", "start": "2026-10-13T09:30:00-07:00", "end": "2026-10-13T10:00:00-07:00", "zone": "America/Los_Angeles", "kind": "meeting", "organizer": "Priya", "movable": true },
+    { "id": "m-offsite-kickoff", "title": "Offsite kickoff", "start": "2026-10-14T13:00:00+01:00", "end": "2026-10-14T15:00:00+01:00", "zone": "Europe/London", "kind": "meeting", "organizer": "Hannah", "movable": false },
+    { "id": "m-advisor", "title": "1:1 with advisor", "start": "2026-10-14T16:30:00-07:00", "end": "2026-10-14T17:00:00-07:00", "zone": "America/Los_Angeles", "kind": "meeting", "organizer": "Dr. Chen", "movable": true },
+    { "id": "m-standup-thu", "title": "Team standup", "start": "2026-10-15T09:00:00-07:00", "end": "2026-10-15T09:15:00-07:00", "zone": "America/Los_Angeles", "kind": "meeting", "organizer": "Priya", "movable": false },
+    { "id": "m-offsite-roadmap", "title": "Offsite: roadmap session", "start": "2026-10-15T09:30:00+01:00", "end": "2026-10-15T12:30:00+01:00", "zone": "Europe/London", "kind": "meeting", "organizer": "Hannah", "movable": false },
+    { "id": "m-lunch-london", "title": "Lunch with the London team", "start": "2026-10-15T12:30:00+01:00", "end": "2026-10-15T13:30:00+01:00", "zone": "Europe/London", "kind": "meeting", "organizer": "Hannah", "movable": true },
+    { "id": "m-metrics-review", "title": "Weekly metrics review", "start": "2026-10-15T15:00:00-07:00", "end": "2026-10-15T16:00:00-07:00", "zone": "America/Los_Angeles", "kind": "meeting", "organizer": "Marco", "attendees": ["Marco", "Lena", "Sam"], "movable": true },
+    { "id": "m-interviews", "title": "User interview synthesis", "start": "2026-10-16T10:00:00+01:00", "end": "2026-10-16T11:30:00+01:00", "zone": "Europe/London", "kind": "meeting", "organizer": "Hannah", "movable": true },
+    { "id": "m-allhands", "title": "Company all-hands", "start": "2026-10-16T14:00:00-07:00", "end": "2026-10-16T15:00:00-07:00", "zone": "America/Los_Angeles", "kind": "meeting", "organizer": "Jordan", "movable": false },
+    { "id": "m-weekly-planning", "title": "Weekly planning", "start": "2026-10-18T17:00:00-07:00", "end": "2026-10-18T17:45:00-07:00", "zone": "America/Los_Angeles", "kind": "task-block", "movable": true }
+  ],
+  "tasks": [
+    { "id": "t-metrics-narrative", "title": "Write the Q3 metrics narrative", "estimateMinutes": 120, "kind": "deep", "needsConnectivity": false, "offlineNeeds": ["Q3 metrics export (CSV)", "Dashboard screenshots"], "priority": 1, "project": "Quarterly review", "done": false },
+    { "id": "t-funnel-pr", "title": "Review the onboarding funnel PR", "estimateMinutes": 30, "kind": "quick", "needsConnectivity": true, "offlineNeeds": [], "priority": 2, "project": "Growth", "done": false },
+    { "id": "t-ddia-ch7", "title": "Read Designing Data-Intensive Applications, ch. 7", "estimateMinutes": 90, "kind": "deep", "needsConnectivity": false, "offlineNeeds": ["Chapter 7 (PDF)"], "priority": 3, "project": "Learning", "done": false },
+    { "id": "t-talk-outline", "title": "Draft the offsite talk outline", "estimateMinutes": 75, "kind": "deep", "needsConnectivity": false, "offlineNeeds": ["Last offsite deck"], "priority": 1, "project": "Offsite", "done": false },
+    { "id": "t-advisor-reply", "title": "Reply to advisor about the thesis timeline", "estimateMinutes": 20, "kind": "quick", "needsConnectivity": true, "offlineNeeds": [], "priority": 2, "project": "Thesis", "done": false },
+    { "id": "t-expenses", "title": "File expenses from the Seattle trip", "estimateMinutes": 15, "kind": "light", "needsConnectivity": true, "offlineNeeds": [], "priority": 3, "project": "Admin", "done": false },
+    { "id": "t-notebook", "title": "Clean up the experiment notebook", "estimateMinutes": 60, "kind": "deep", "needsConnectivity": false, "offlineNeeds": ["Notebook and sample data (200 MB)"], "priority": 2, "project": "Growth", "done": false },
+    { "id": "t-interview-qs", "title": "Prepare questions for London user interviews", "estimateMinutes": 40, "kind": "quick", "needsConnectivity": false, "offlineNeeds": ["Interview guide template"], "priority": 1, "project": "Offsite", "done": false }
+  ],
+  "assignments": [
+    { "windowId": "flight-vs20:0", "taskId": "t-metrics-narrative" },
+    { "windowId": "flight-vs20:0", "taskId": "t-talk-outline" },
+    { "windowId": "gate-a7:0", "taskId": "t-funnel-pr" }
+  ]
+}

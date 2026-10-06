@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/* Dark mode is driven by an explicit attribute set before first paint. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --canvas: #fafaf8;
+  --surface: #ffffff;
+  --surface-2: #f3f3ef;
+  --ink: #1a1a1f;
+  --ink-2: #5c5c66;
+  --ink-3: #8a8a94;
+  --line: #e6e6e1;
+  --line-2: #d6d6d0;
+  --accent: #7aa7ff;
+  --accent-ink: #2f5fd0;
+  --accent-soft: #eaf1ff;
+  --warn: #e8a657;
+  --warn-ink: #8a5a12;
+  --warn-soft: #fbf1e3;
+  --cloud: #ffffff;
+  --cloud-warn: #d6d6dc;
+  --shadow-color: 26 26 31;
+}
+
+[data-theme="dark"] {
+  --canvas: #0e1424;
+  --surface: #151d30;
+  --surface-2: #1b2438;
+  --ink: #ececf1;
+  --ink-2: #a3a8b8;
+  --ink-3: #727891;
+  --line: #26304a;
+  --line-2: #2f3a57;
+  --accent: #7aa7ff;
+  --accent-ink: #9dbdff;
+  --accent-soft: #1b2a4a;
+  --warn: #e8a657;
+  --warn-ink: #f0bc78;
+  --warn-soft: #3a2c17;
+  --cloud: #f4f4f7;
+  --cloud-warn: #b9bcc8;
+  --shadow-color: 0 0 0;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-soft: var(--warn-soft);
+  --color-cloud: var(--cloud);
+  --color-cloud-warn: var(--cloud-warn);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --shadow-xs: 0 1px 2px rgb(var(--shadow-color) / 0.04);
+  --shadow-sm: 0 1px 2px rgb(var(--shadow-color) / 0.04), 0 4px 12px rgb(var(--shadow-color) / 0.05);
+  --shadow-md: 0 2px 4px rgb(var(--shadow-color) / 0.05), 0 12px 32px rgb(var(--shadow-color) / 0.08);
+
+  --animate-bob: bob 2.6s ease-in-out infinite;
+  --animate-rise: rise 220ms var(--ease-out-soft) both;
+
+  @keyframes bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  html {
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-feature-settings: "cv11", "ss01", "ss03";
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    min-height: 100dvh;
+    text-rendering: optimizeLegibility;
+  }
+  * {
+    transition-timing-function: var(--ease-out-soft);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: var(--accent-soft);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility hairline {
+  border-color: var(--line);
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
