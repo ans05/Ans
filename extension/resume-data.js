@@ -94,7 +94,7 @@ const EVIDENCE_BANK = {
         { id: "haas.regression", result: "1,000+ regression", text: "Fit regression models to 1,000+ participant responses in R, producing behavioral insights that shaped follow-on study design", metrics: ["1,000+"], tools: ["R"], tags: ["statistics", "data_analysis", "r_language"] },
         { id: "haas.coding", result: "481 coded", text: "Coded 481 open-ended participant responses into a structured codebook, converting free text into analyzable categorical data", metrics: ["481"], tools: [], tags: ["qualitative_research", "user_research", "data_analysis"] },
         { id: "haas.independent", text: "Initiated 2 self-directed projects — a 20+ data-point analysis of leadership-seeking strategies in political debates, and a study of AI tools' effect on research productivity", metrics: ["2", "20+"], tools: [], tags: ["initiative", "data_analysis"] },
-        { id: "haas.comms", text: "Presented experimental results and statistical analyses in written reports and slide decks to 2 faculty PIs and interdisciplinary teams", metrics: ["2"], tools: [], tags: ["stakeholder_communication", "written_communication", "cross_functional_collaboration"] },
+        { id: "haas.comms", text: "Presented data-driven stories through written reports and slide presentations, explaining behavioral research findings and statistical analyses to 2 faculty researchers and interdisciplinary teams", metrics: ["2"], tools: [], tags: ["stakeholder_communication", "written_communication", "cross_functional_collaboration"] },
       ],
     },
     {
