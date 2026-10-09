@@ -1,21 +1,32 @@
-Solutions Architect Intern — AGS Tech U (AWSI), 2027 — Amazon
-Seattle, WA — in-person
+Associate Solutions Architect Intern — Amazon (AWS)
+Seattle, WA — in-person, 12-week cohort starting May 24, 2027
 
-Amazon Global Sales (AGS) Tech U is a 12-week, cohort-based internship starting May 24, 2027 in Seattle, designed to build the next generation of Solutions Architects. Interns rotate through hands-on technical training and shadow customer-facing engagements across one or more technical domains.
+Do you want to help us build new things and evangelize use of AWS with customers? As an Associate Solutions Architect intern you will partner across AWS to help customers craft highly scalable, flexible and resilient cloud architectures that address customer business problems. As a trusted customer advocate, you will help organizations understand best practices around cloud-based solutions, and how to migrate existing workloads to the cloud. You will have the opportunity to help customers use AWS within their organizations ranging from new start-ups to large enterprise customers.
 
-What you'll do:
-- Learn to design and present technical solutions across domains such as analytics, security, storage, DevOps, application development, or machine learning.
-- Work with AI/ML technologies as part of customer-facing technical scenarios.
-- Communicate technical recommendations to technical and non-technical audiences, including senior leadership.
-- Participate in a structured, cohort-based technical curriculum alongside other interns.
+This position is part of an accelerated career development program for those who want to advance both their technical and business skills. The program consists of mentoring by subject matter experts, project-based learning curriculum and experiential learning assignments.
+
+Program Overview:
+The internship is a 12-week, cohort-based immersive experience that gives you a front-row seat to life as an AWS Solutions Architect. Your internship follows a weekly progression from onboarding and cloud fundamentals through hands-on customer work and a capstone project. You'll participate in customer calls, build proof-of-concept architectures, and contribute to deliverables that make a real impact.
+
+Location Details: This program is offered only in Seattle, WA.
+Start Date Details: Start dates are tentatively set to occur May 24th, 2027.
+
+Key job responsibilities:
+- Create solutions that address customer business problems and accelerate the adoption of AWS services.
+- Interface with customer stakeholders, including developers and team leads.
+- Drive effective feedback gathering from customers, distill and translate feedback into clear business and technical requirements for product and engineering teams.
 
 Basic Qualifications:
-- Currently enrolled in a Bachelor's or greater degree program, with an expected graduation date between December 2027 and September 2028.
-- Programming experience in Python, Ruby, Node.js, C#, or C++.
+- Work 40 hours/week minimum and commit to a 12 week internship maximum.
+- Experience with one of the following programming languages: Python, Ruby, Node.js, C#, or C++.
 - Experience with AI/ML technologies.
-- Experience in one or more of: analytics, security, storage, DevOps, application development, or machine learning.
-- Strong written and verbal communication skills, including the ability to communicate with senior leadership.
-- Must be 18 years of age or older.
-- Able to work in person in Seattle, WA for the full 12-week cohort starting May 24, 2027.
+- Experience with one or more of the following domains: analytics, security, storage, DevOps, application development, or machine learning.
+- Experience in written and verbal communication skills to communicate with technical and non-technical audiences, including senior leadership.
+- Currently enrolled in a bachelors or greater degree program in Computer Science, Computer Engineering or related technical fields with a graduation date between December 2027 and September 2028.
+- Are 18 years of age or older.
+
+Preferred Qualifications:
+- AWS or other cloud certification.
+- Experience applying established frameworks and design patterns to deliver working software (can include coursework, personal projects, hackathons, or previous internships).
 
 Amazon is an equal opportunity employer and does not discriminate on the basis of protected veteran status, disability, or other legally protected status.
