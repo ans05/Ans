@@ -1,0 +1,21 @@
+Solutions Architect Intern — AGS Tech U (AWSI), 2027 — Amazon
+Seattle, WA — in-person
+
+Amazon Global Sales (AGS) Tech U is a 12-week, cohort-based internship starting May 24, 2027 in Seattle, designed to build the next generation of Solutions Architects. Interns rotate through hands-on technical training and shadow customer-facing engagements across one or more technical domains.
+
+What you'll do:
+- Learn to design and present technical solutions across domains such as analytics, security, storage, DevOps, application development, or machine learning.
+- Work with AI/ML technologies as part of customer-facing technical scenarios.
+- Communicate technical recommendations to technical and non-technical audiences, including senior leadership.
+- Participate in a structured, cohort-based technical curriculum alongside other interns.
+
+Basic Qualifications:
+- Currently enrolled in a Bachelor's or greater degree program, with an expected graduation date between December 2027 and September 2028.
+- Programming experience in Python, Ruby, Node.js, C#, or C++.
+- Experience with AI/ML technologies.
+- Experience in one or more of: analytics, security, storage, DevOps, application development, or machine learning.
+- Strong written and verbal communication skills, including the ability to communicate with senior leadership.
+- Must be 18 years of age or older.
+- Able to work in person in Seattle, WA for the full 12-week cohort starting May 24, 2027.
+
+Amazon is an equal opportunity employer and does not discriminate on the basis of protected veteran status, disability, or other legally protected status.

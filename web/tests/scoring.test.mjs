@@ -128,7 +128,7 @@ test("classification separates subjective traits from analytical requirements", 
 
 // A bank-wide prohibited list applies to every entry, not just the one it's declared on.
 test("bank-wide prohibited items block a claim under ANY entry, and don't affect unrelated entries", () => {
-  assert.deepEqual(EVIDENCE_BANK.prohibited, ["Microsoft PowerPoint", "Microsoft Word", "Microsoft Excel"]);
+  assert.deepEqual(EVIDENCE_BANK.prohibited, ["Microsoft PowerPoint", "Microsoft Word"]);
   const entry = EVIDENCE_BANK.entries.find((e) => e.id === "haas");
   const fact = entry.facts.find((f) => f.id === "haas.comms");
   const bad = S.factGuard("Presented experimental results in Microsoft PowerPoint decks to 2 faculty PIs", fact, entry, EVIDENCE_BANK);
@@ -137,9 +137,9 @@ test("bank-wide prohibited items block a claim under ANY entry, and don't affect
   // Without the bank argument (old call shape), the bank-wide list is simply not checked — no crash.
   assert.ok(S.factGuard(fact.text, fact, entry).ok);
   // Skills selection never lists a bank-wide-prohibited name even if verifiedSkills somehow contained one.
-  const withBanned = { ...EVIDENCE_BANK, verifiedSkills: [...EVIDENCE_BANK.verifiedSkills, { name: "Microsoft Excel", group: "Product & Tools", evidence: "listed" }] };
+  const withBanned = { ...EVIDENCE_BANK, verifiedSkills: [...EVIDENCE_BANK.verifiedSkills, { name: "Microsoft Word", group: "Product & Tools", evidence: "listed" }] };
   const sk = S.selectSkills(withBanned, "ds_ml", "");
-  assert.ok(!sk.skills.some((s) => /Excel/.test(s.vals)));
+  assert.ok(!sk.skills.some((s) => /\bWord\b/.test(s.vals)));
 });
 
 // A "graduate program" requirement is a knowable fact from Education, distinct from field-of-study —
@@ -156,6 +156,16 @@ test("graduate-enrollment requirement reads Education directly and is never a va
   const gradDoc = { ...DEFAULT_RESUME, education: { ...DEFAULT_RESUME.education, degree: "M.S. Data Science" } };
   const g = S.evaluate([{ statement: "Currently enrolled in a graduate degree program", category: "required_qualification", capabilities: ["graduate_enrollment"] }], gradDoc, { bank: EVIDENCE_BANK });
   assert.equal(g.items[0].status, "matched");
+});
+
+// "Bachelor's or greater/higher" eligibility language is distinct from a graduate-only requirement:
+// an enrolled undergrad already satisfies it. Mixing the two up would wrongly mark it missing.
+test("'bachelor's or higher' eligibility is matched by an in-progress bachelor's degree, unlike a graduate-only requirement", () => {
+  const r = S.evaluate([{ statement: "Currently enrolled in a bachelor's or greater degree program", category: "required_qualification", capabilities: ["degree_bachelor_or_higher"] }], DEFAULT_RESUME, { bank: EVIDENCE_BANK });
+  const item = r.items[0];
+  assert.equal(item.status, "matched");
+  assert.equal(item.evidenceType, "direct");
+  assert.match(item.evidence, /B\.A\./);
 });
 
 // Degree matches from Education, not from bullets.

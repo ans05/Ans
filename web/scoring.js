@@ -46,9 +46,18 @@ const CAPABILITIES = {
   },
   graduate_enrollment: {
     label: "Currently enrolled in a graduate degree program",
+    hint: "only for postings that require graduate standing — not for 'bachelor's or greater/higher' language, which an enrolled undergrad already satisfies (use degree_bachelor_or_higher instead)",
     degreeLevel: true,
     graduateWords: /\b(m\.?s\.?|m\.?a\.?|mba|m\.?eng\.?|ph\.?d\.?|master'?s?|doctoral|doctorate|graduate program)\b/i,
     undergradWords: /\b(b\.?a\.?|b\.?s\.?|bachelor'?s?|undergraduate)\b/i,
+  },
+  degree_bachelor_or_higher: {
+    label: "Currently enrolled in a bachelor's degree program or higher",
+    hint: "use for 'bachelor's or greater/higher' eligibility language — an enrolled undergrad already qualifies",
+    degreeLevel: true,
+    graduateWords: /\b(b\.?a\.?|b\.?s\.?|bachelor'?s?|undergraduate|m\.?s\.?|m\.?a\.?|mba|m\.?eng\.?|ph\.?d\.?|master'?s?|doctoral|doctorate|graduate program)\b/i,
+    undergradWords: /(?!)/, // never matches — nothing below bachelor's needs to fail this check
+    matchedReason: "degree level listed in Education is bachelor's or higher",
   },
   cross_functional_collaboration: {
     label: "Cross-functional collaboration",
@@ -248,7 +257,7 @@ function evaluateCapability(capId, units, keywords = []) {
 
   if (cap.degreeLevel) {
     const edu = units.find((u) => u.section === "education" && (cap.graduateWords.test(u.text) || cap.undergradWords.test(u.text)));
-    if (edu && cap.graduateWords.test(edu.text)) return { ...result, status: "matched", evidence: edu.text, where: edu.where, reason: "degree level listed in Education is graduate-level", confidence: "high", evidenceType: "direct" };
+    if (edu && cap.graduateWords.test(edu.text)) return { ...result, status: "matched", evidence: edu.text, where: edu.where, reason: cap.matchedReason || "degree level listed in Education is graduate-level", confidence: "high", evidenceType: "direct" };
     if (edu && cap.undergradWords.test(edu.text)) return { ...result, status: "missing", evidence: edu.text, where: edu.where, reason: "Education lists an undergraduate degree, not graduate enrollment", confidence: "high", evidenceType: "direct" };
     return { ...result, reason: "no degree level stated in Education to check against" };
   }

@@ -268,7 +268,7 @@ els.tailor.addEventListener("click", async () => {
 
 // ── Score (canonical evaluation; extraction is the only model call) ──────
 
-const CAP_LIST = Object.entries(S.CAPABILITIES).map(([id, c]) => `${id} — ${c.label}`).join("\n");
+const CAP_LIST = Object.entries(S.CAPABILITIES).map(([id, c]) => `${id} — ${c.label}${c.hint ? ` (${c.hint})` : ""}`).join("\n");
 
 function extractPrompt(jd) {
   return `Extract every distinct statement from this job posting that describes the candidate or the job, and classify each. Reply with only JSON:

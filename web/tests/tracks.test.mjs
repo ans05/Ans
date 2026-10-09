@@ -64,8 +64,10 @@ test("skills come only from the verified bank, ordered for the track; posting-on
   const ds = S.selectSkills(EVIDENCE_BANK, "ds_ml", jd("unsupported_skill.txt"));
   const flat = ds.skills.map((s) => s.vals).join(", ");
   assert.match(flat, /^Python, SQL, R/);
-  assert.ok(!/spark|tableau|airflow|bigquery/i.test(flat), flat);
-  assert.deepEqual(ds.unsupported.sort(), ["airflow", "pyspark", "spark", "tableau"].sort());
+  // Tableau is now a verified skill, so a posting that asks for it is backed, not reported as unsupported.
+  assert.ok(/tableau/i.test(flat), flat);
+  assert.ok(!/spark|airflow|bigquery/i.test(flat), flat);
+  assert.deepEqual(ds.unsupported.sort(), ["airflow", "pyspark", "spark"].sort());
   const pm = S.selectSkills(EVIDENCE_BANK, "product_management", jd("roblox.txt"));
   assert.match(pm.skills.map((s) => s.vals).join(", "), /product strategy/);
 });

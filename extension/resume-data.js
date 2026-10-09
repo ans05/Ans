@@ -13,7 +13,7 @@ const EVIDENCE_BANK = {
   version: 2,
   // Applies to every entry, regardless of which one a bullet is under — confirmed 2026-09-30:
   // don't claim these tools until explicitly confirmed, even if a future edit adds them elsewhere.
-  prohibited: ["Microsoft PowerPoint", "Microsoft Word", "Microsoft Excel"],
+  prohibited: ["Microsoft PowerPoint", "Microsoft Word"],
   profile: {
     name: "Aneesh Srirambhatla",
     phone: "424-390-9605",
@@ -186,9 +186,10 @@ const EVIDENCE_BANK = {
     { name: "competitive analysis", group: "Product & Tools", evidence: "siemens.competitive" }, { name: "experimentation", group: "Product & Tools", evidence: "gk.abtests" },
     { name: "cross-functional collaboration", group: "Product & Tools", evidence: "siemens.crossfn" },
     { name: "Git", group: "Product & Tools", evidence: "listed" }, { name: "Power BI", group: "Product & Tools", evidence: "listed" }, { name: "Microsoft Azure", group: "Product & Tools", evidence: "listed" },
+    { name: "Tableau", group: "Product & Tools", evidence: "listed" }, { name: "Microsoft Excel", group: "Product & Tools", evidence: "listed" },
   ],
   // Listed on the original résumé without a supporting bullet; kept only because the candidate confirmed them.
-  unevidencedSkills: ["Power BI", "Microsoft Azure", "Git", "PostgreSQL", "pandas", "NumPy"],
+  unevidencedSkills: ["Power BI", "Microsoft Azure", "Git", "PostgreSQL", "pandas", "NumPy", "Tableau", "Microsoft Excel"],
 };
 
 // The rendered base résumé, derived from the bank so the two can never disagree.

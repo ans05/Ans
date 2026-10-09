@@ -1,0 +1,30 @@
+Business Intelligence Engineer Intern — Amazon
+Seattle, WA (or other Amazon site)
+
+Amazon is seeking a Business Intelligence Engineer Intern to build data artifacts, dashboards, and statistical analyses that help teams make better business decisions.
+
+What you'll do:
+- Build and maintain data artifacts such as ETL jobs, data models, and queries.
+- Query and model data with SQL to answer business questions.
+- Build dashboards and visualizations using tools like Excel, Tableau, QuickSight, MicroStrategy, or Power BI.
+- Apply basic statistical methods (e.g. t-test, Chi-squared) to difficult business problems.
+- Communicate findings and recommendations to business stakeholders.
+
+Basic Qualifications:
+- Currently enrolled in a Bachelor's degree or higher program, with a conferral date between October 2027 and December 2030.
+- Experience with data querying or modeling with SQL.
+- Experience with building and maintaining basic data artifacts (e.g. ETL, data models, queries).
+- Experience with one or more industry analytics visualization tools (e.g. Excel, Tableau, QuickSight, MicroStrategy, PowerBI).
+- Experience applying basic statistical methods (e.g. t-test, Chi-squared) to difficult business problems.
+
+Preferred Qualifications:
+- Experience in a scripting language (Python, Java, R).
+- Experience with data modeling, relational and star-schema design, and data pipeline design.
+- Experience applying basic statistical methods (e.g. regression) to difficult business problems.
+- Currently pursuing a Master's degree.
+- Previous technical internship experience.
+- Ability to deal with ambiguity in a fast-paced environment.
+- Strong communication and data presentation skills.
+- Strong analytical skills.
+
+Amazon is an equal opportunity employer and does not discriminate on the basis of protected veteran status, disability, or other legally protected status.

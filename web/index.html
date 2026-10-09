@@ -861,9 +861,18 @@ const CAPABILITIES = {
   },
   graduate_enrollment: {
     label: "Currently enrolled in a graduate degree program",
+    hint: "only for postings that require graduate standing — not for 'bachelor's or greater/higher' language, which an enrolled undergrad already satisfies (use degree_bachelor_or_higher instead)",
     degreeLevel: true,
     graduateWords: /\b(m\.?s\.?|m\.?a\.?|mba|m\.?eng\.?|ph\.?d\.?|master'?s?|doctoral|doctorate|graduate program)\b/i,
     undergradWords: /\b(b\.?a\.?|b\.?s\.?|bachelor'?s?|undergraduate)\b/i,
+  },
+  degree_bachelor_or_higher: {
+    label: "Currently enrolled in a bachelor's degree program or higher",
+    hint: "use for 'bachelor's or greater/higher' eligibility language — an enrolled undergrad already qualifies",
+    degreeLevel: true,
+    graduateWords: /\b(b\.?a\.?|b\.?s\.?|bachelor'?s?|undergraduate|m\.?s\.?|m\.?a\.?|mba|m\.?eng\.?|ph\.?d\.?|master'?s?|doctoral|doctorate|graduate program)\b/i,
+    undergradWords: /(?!)/, // never matches — nothing below bachelor's needs to fail this check
+    matchedReason: "degree level listed in Education is bachelor's or higher",
   },
   cross_functional_collaboration: {
     label: "Cross-functional collaboration",
@@ -1063,7 +1072,7 @@ function evaluateCapability(capId, units, keywords = []) {
 
   if (cap.degreeLevel) {
     const edu = units.find((u) => u.section === "education" && (cap.graduateWords.test(u.text) || cap.undergradWords.test(u.text)));
-    if (edu && cap.graduateWords.test(edu.text)) return { ...result, status: "matched", evidence: edu.text, where: edu.where, reason: "degree level listed in Education is graduate-level", confidence: "high", evidenceType: "direct" };
+    if (edu && cap.graduateWords.test(edu.text)) return { ...result, status: "matched", evidence: edu.text, where: edu.where, reason: cap.matchedReason || "degree level listed in Education is graduate-level", confidence: "high", evidenceType: "direct" };
     if (edu && cap.undergradWords.test(edu.text)) return { ...result, status: "missing", evidence: edu.text, where: edu.where, reason: "Education lists an undergraduate degree, not graduate enrollment", confidence: "high", evidenceType: "direct" };
     return { ...result, reason: "no degree level stated in Education to check against" };
   }
@@ -1587,7 +1596,7 @@ const EVIDENCE_BANK = {
   version: 2,
   // Applies to every entry, regardless of which one a bullet is under — confirmed 2026-09-30:
   // don't claim these tools until explicitly confirmed, even if a future edit adds them elsewhere.
-  prohibited: ["Microsoft PowerPoint", "Microsoft Word", "Microsoft Excel"],
+  prohibited: ["Microsoft PowerPoint", "Microsoft Word"],
   profile: {
     name: "Aneesh Srirambhatla",
     phone: "424-390-9605",
@@ -1760,9 +1769,10 @@ const EVIDENCE_BANK = {
     { name: "competitive analysis", group: "Product & Tools", evidence: "siemens.competitive" }, { name: "experimentation", group: "Product & Tools", evidence: "gk.abtests" },
     { name: "cross-functional collaboration", group: "Product & Tools", evidence: "siemens.crossfn" },
     { name: "Git", group: "Product & Tools", evidence: "listed" }, { name: "Power BI", group: "Product & Tools", evidence: "listed" }, { name: "Microsoft Azure", group: "Product & Tools", evidence: "listed" },
+    { name: "Tableau", group: "Product & Tools", evidence: "listed" }, { name: "Microsoft Excel", group: "Product & Tools", evidence: "listed" },
   ],
   // Listed on the original résumé without a supporting bullet; kept only because the candidate confirmed them.
-  unevidencedSkills: ["Power BI", "Microsoft Azure", "Git", "PostgreSQL", "pandas", "NumPy"],
+  unevidencedSkills: ["Power BI", "Microsoft Azure", "Git", "PostgreSQL", "pandas", "NumPy", "Tableau", "Microsoft Excel"],
 };
 
 // The rendered base résumé, derived from the bank so the two can never disagree.
@@ -2226,7 +2236,7 @@ els.tailor.addEventListener("click", async () => {
 
 // ── Score (canonical evaluation; extraction is the only model call) ──────
 
-const CAP_LIST = Object.entries(S.CAPABILITIES).map(([id, c]) => `${id} — ${c.label}`).join("\n");
+const CAP_LIST = Object.entries(S.CAPABILITIES).map(([id, c]) => `${id} — ${c.label}${c.hint ? ` (${c.hint})` : ""}`).join("\n");
 
 function extractPrompt(jd) {
   return `Extract every distinct statement from this job posting that describes the candidate or the job, and classify each. Reply with only JSON:
