@@ -40,10 +40,7 @@ const EVIDENCE_BANK = {
       verifiedMetrics: ["8+", "90-day", "3"],
       verifiedTools: [],
       tags: ["product_strategy_roadmap", "market_research", "competitive_analysis", "cross_functional_collaboration", "user_research", "stakeholder_communication"],
-      needsConfirmation: [
-        "Who received the final activation strategy (director-level presentation not confirmed)",
-        "Whether provider journeys were researched in addition to patient journeys",
-      ],
+      needsConfirmation: [],
       prohibited: ["presented to leadership/directors", "provider journeys", "revenue or adoption figures", "team size"],
       facts: [
         { id: "siemens.roadmap", result: "90-day roadmap", text: "Built a prioritized 90-day activation roadmap for the theranostics business from customer-journey, workflow, and adoption-barrier research across 8+ organizations", metrics: ["90-day", "8+"], tools: [], tags: ["product_strategy_roadmap", "user_research", "market_research"] },
@@ -83,10 +80,10 @@ const EVIDENCE_BANK = {
       location: "Berkeley, CA",
       dates: "Feb 2025 – Aug 2026",
       verifiedMetrics: ["1,000+", "481", "10+", "20+", "2", "5-10"],
-      verifiedTools: ["R"],
-      tags: ["statistics", "experimentation", "user_research", "data_analysis", "stakeholder_communication", "r_language", "qualitative_research"],
-      needsConfirmation: ["Total number of studies designed and total unique participants across them"],
-      prohibited: ["sole ownership of study design (co-designed only)", "publication claims", "equating '1,000+ responses' with '1,000+ participants' (responses ≠ unique participants)", "a specific number of studies not stated in a fact"],
+      verifiedTools: ["R", "Power BI"],
+      tags: ["statistics", "experimentation", "user_research", "data_analysis", "stakeholder_communication", "r_language", "qualitative_research", "forecasting", "dashboards"],
+      needsConfirmation: [],
+      prohibited: ["sole ownership of study design (co-designed only)", "publication claims", "equating '1,000+ responses' with '1,000+ participants' (responses ≠ unique participants)", "a specific number of studies not stated in a fact", "specific forecast accuracy numbers (not documented)"],
       facts: [
         { id: "haas.hypotheses", result: "1,000+ regression", text: "Structured open-ended behavioral research questions into testable hypotheses and analyzed 1,000+ participant responses in R using regression", metrics: ["1,000+"], tools: ["R"], tags: ["statistics", "data_analysis", "experimentation", "r_language"] },
         { id: "haas.factors", text: "Examined 10+ factors that influence leadership and group behavior under Professors Cameron Anderson and Angus Hildreth", metrics: ["10+"], tools: [], tags: ["user_research", "statistics"] },
@@ -95,6 +92,7 @@ const EVIDENCE_BANK = {
         { id: "haas.coding", result: "481 coded", text: "Coded 481 open-ended participant responses into a structured codebook, converting free text into analyzable categorical data", metrics: ["481"], tools: [], tags: ["qualitative_research", "user_research", "data_analysis"] },
         { id: "haas.independent", text: "Initiated 2 self-directed projects — a 20+ data-point analysis of leadership-seeking strategies in political debates, and a study of AI tools' effect on research productivity", metrics: ["2", "20+"], tools: [], tags: ["initiative", "data_analysis"] },
         { id: "haas.comms", text: "Presented data-driven stories through written reports and slide presentations, explaining behavioral research findings and statistical analyses to 2 faculty researchers and interdisciplinary teams", metrics: ["2"], tools: [], tags: ["stakeholder_communication", "written_communication", "cross_functional_collaboration"] },
+        { id: "haas.forecasting", text: "Built Power BI dashboards to forecast sales and engagement trends", metrics: [], tools: ["Power BI"], tags: ["forecasting", "dashboards", "data_visualization"] },
       ],
     },
     {
@@ -108,7 +106,7 @@ const EVIDENCE_BANK = {
       verifiedMetrics: ["100+", "15%", "25%", "10+", "10,000+"],
       verifiedTools: ["Python", "SQL"],
       tags: ["data_engineering", "sql", "python", "ml_evaluation", "user_research", "product_launch", "recommendation_systems"],
-      needsConfirmation: ["Whether ingestion replaced a manual process", "How the 25% engagement metric was defined and who instrumented it"],
+      needsConfirmation: [],
       prohibited: ["'replaced manual curation'", "instrumented engagement tracking", "defining engagement as retention/sessions/time"],
       facts: [
         { id: "flourish.etl", result: "ETL 100+ sources", text: "Engineered a Python and SQL ETL pipeline to ingest, clean, and validate data from 100+ research sources", metrics: ["100+"], tools: ["Python", "SQL", "ETL"], tags: ["data_engineering", "sql", "python"] },
@@ -130,8 +128,8 @@ const EVIDENCE_BANK = {
       verifiedMetrics: ["100+", "30%"],
       verifiedTools: ["iOS", "Swift"],
       tags: ["product_ownership", "experimentation", "product_launch", "product_analytics", "user_research", "product_strategy_roadmap", "partnership", "mobile"],
-      needsConfirmation: ["App Store vs TestFlight distribution and download count", "Number and duration of A/B tests"],
-      prohibited: ["App Store release", "download counts", "number of A/B tests", "revenue"],
+      needsConfirmation: [],
+      prohibited: ["App Store release", "download counts", "number of A/B tests", "revenue", "A/B test duration or timeline (not documented)", "statistical significance claims (not calculated)"],
       facts: [
         { id: "gk.abtests", result: "30% session duration", text: "Designed and analyzed A/B tests for an iOS app used by 100+ athletes, translating results into feature decisions that increased average session duration by 30%", metrics: ["100+", "30%"], tools: ["iOS"], tags: ["experimentation", "product_analytics", "product_decisions"] },
         { id: "gk.launch", result: "shipped app 100+", text: "Built and shipped an iOS app from idea to launch that applies sports psychology techniques to athletic performance for 100+ athletes", metrics: ["100+"], tools: ["iOS", "Swift"], tags: ["product_launch", "product_ownership", "mobile"] },
@@ -152,7 +150,7 @@ const EVIDENCE_BANK = {
       verifiedTools: ["JavaScript", "Python", "Claude API", "Playwright", "LLM"],
       altTitles: [],
       tags: ["product_ownership", "product_launch", "ai_evaluation", "data_engineering", "python", "initiative", "quality"],
-      needsConfirmation: ["Any measured outcome from users (time saved, interviews landed, etc.)"],
+      needsConfirmation: [],
       prohibited: ["revenue", "funding", "company/team size", "specific company logos as customers", "time saved by users (not measured)", "interviews landed or other career outcomes (not measured)"],
       facts: [
         { id: "rt.core", result: "core tool", text: "Built an AI-powered resume tailoring tool used by 30+ active users to flag qualification gaps and suggest targeted improvements against job postings", metrics: ["30+"], tools: ["Claude API", "LLM"], tags: ["ai_evaluation", "product_ownership", "product_launch", "data_analysis"] },
@@ -185,11 +183,12 @@ const EVIDENCE_BANK = {
     { name: "customer journey mapping", group: "Product & Tools", evidence: "siemens.journey" }, { name: "market research", group: "Product & Tools", evidence: "siemens.partnerships" },
     { name: "competitive analysis", group: "Product & Tools", evidence: "siemens.competitive" }, { name: "experimentation", group: "Product & Tools", evidence: "gk.abtests" },
     { name: "cross-functional collaboration", group: "Product & Tools", evidence: "siemens.crossfn" },
-    { name: "Git", group: "Product & Tools", evidence: "listed" }, { name: "Power BI", group: "Product & Tools", evidence: "listed" }, { name: "Microsoft Azure", group: "Product & Tools", evidence: "listed" },
+    { name: "Git", group: "Product & Tools", evidence: "listed" }, { name: "Power BI", group: "Product & Tools", evidence: "haas.forecasting" }, { name: "Microsoft Azure", group: "Product & Tools", evidence: "listed" },
     { name: "Tableau", group: "Product & Tools", evidence: "listed" }, { name: "Microsoft Excel", group: "Product & Tools", evidence: "listed" },
+    { name: "forecasting", group: "Analytics & Experimentation", evidence: "haas.forecasting" },
   ],
   // Listed on the original résumé without a supporting bullet; kept only because the candidate confirmed them.
-  unevidencedSkills: ["Power BI", "Microsoft Azure", "Git", "PostgreSQL", "pandas", "NumPy", "Tableau", "Microsoft Excel"],
+  unevidencedSkills: ["Microsoft Azure", "Git", "PostgreSQL", "pandas", "NumPy", "Tableau", "Microsoft Excel"],
 };
 
 // The rendered base résumé, derived from the bank so the two can never disagree.

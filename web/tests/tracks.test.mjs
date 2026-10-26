@@ -84,8 +84,10 @@ test("unsupported skills are missing with a confirmation verdict and are not inf
   const by = Object.fromEntries(r.items.map((i) => [i.capability || i.statement, i]));
   assert.equal(by["Experience with Apache Spark or PySpark"].status, "missing");
   assert.equal(by["Experience with Apache Spark or PySpark"].verdict, "Needs candidate confirmation");
-  assert.equal(by.dashboards.status, "partially_matched", "Power BI in Skills only → partial, low confidence");
-  assert.equal(by.dashboards.confidence, "low");
+  // Dashboards is now a full match: the Haas Power BI forecasting bullet names "dashboards" directly,
+  // not just a Skills-only listing (unlike Tableau, which is still listed with no backing bullet).
+  assert.equal(by.dashboards.status, "matched", "Power BI dashboards now has a real bullet, not just a Skills listing");
+  assert.equal(by.dashboards.confidence, "high");
   assert.ok(r.readiness < 85, `readiness ${r.readiness} should reflect the missing required tool`);
   assert.ok(r.ats < 100);
 });
