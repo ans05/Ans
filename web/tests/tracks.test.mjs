@@ -57,7 +57,7 @@ test("two GoalKeeper bullets centred on the 30% result are detected and deduped"
   assert.match(dups[0].reason, /same headline metric/);
   assert.deepEqual(S.dedupeSelection(entry, EVIDENCE_BANK).entry.factIds, ["gk.abtests", "gk.launch"]);
   assert.ok(!gk.facts.some((f) => f.id === "gk.metrics") && gk.facts.some((f) => f.id === "gk.feedback"));
-  assert.match(S.selectSkills(EVIDENCE_BANK, "product_strategy", "").skills[0].vals, /^product strategy, roadmapping, user research/);
+  assert.match(S.selectSkills(EVIDENCE_BANK, "product_strategy", "").skills[0].vals, /^product strategy, market research, competitive analysis/);
 });
 
 test("skills come only from the verified bank, ordered for the track; posting-only tools are reported", () => {

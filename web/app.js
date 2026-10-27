@@ -32,7 +32,9 @@ let state = {
 const effectiveTrack = () => state.trackOverride || S.classifyTrack(els.jd.value).track;
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
-const skillsToArray = (obj) => Array.isArray(obj) ? obj : Object.entries(obj).map(([cat, vals]) => ({ cat, vals }));
+// Re-buckets by skill name rather than trusting stored category labels, so an imported
+// résumé's arbitrary categories (or none at all) still come out consistently grouped.
+const skillsToArray = (obj) => S.regroupSkills(obj);
 const skillsToObject = (arr) => Object.fromEntries(arr.filter((s) => s.cat).map((s) => [s.cat, s.vals]));
 const nonEmpty = (en) => ({ ...en, bullets: en.bullets.filter((b) => b && b.trim()), factIds: (en.factIds || []).filter((_, i) => en.bullets[i] && en.bullets[i].trim()) });
 const currentResume = () => ({ ...state.doc, experience: state.doc.experience.map(nonEmpty), projects: state.doc.projects.map(nonEmpty), skills: skillsToObject(state.doc.skills) });

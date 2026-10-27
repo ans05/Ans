@@ -506,22 +506,48 @@ function dedupeSelection(entry, bank) {
 }
 
 // ── Skills selection ────────────────────────────────────────────────────
-const PRODUCT_SKILL_TEMPLATE = {
-  Product: ["product strategy", "roadmapping", "user research", "customer journey mapping", "competitive analysis", "A/B testing", "product analytics"],
-  Technical: ["Python", "SQL", "R", "Swift", "Power BI", "PostgreSQL", "Git", "Microsoft Azure"],
-  "Data & AI": ["experiment design", "regression analysis", "ETL pipelines", "recommendation systems", "model evaluation", "LLM evaluation"],
-};
+// Skill grouping is derived from the skill's own name via pattern matching, never from a
+// hand-typed label on the data — this is what makes it work the same way for any résumé
+// (the candidate's own bank, or one built from an imported résumé with no curated groups).
+const SKILL_GROUP_RULES = [
+  // C++/C# end in a non-word character, so a trailing \b can never match (no boundary between
+  // a symbol and end-of-string/another symbol) — these need a left-only boundary instead.
+  ["Languages", /\bc\+\+|\bc#/i],
+  ["Languages", /\b(python|java(script)?|typescript|swift|golang|rust|scala|kotlin|ruby|php|sql|html|css|matlab|latex|scheme|bash|shell|dart|perl|objective-c|pandas|numpy)\b/i],
+  ["Languages", /^[a-z]$/i], // bare single-letter languages (R, C) only when that is the whole token
+  ["Tools & Platforms", /\b(git(hub|lab)?|docker|kubernetes|aws|amazon web services|sagemaker|azure|gcp|google cloud|power ?bi|tableau|excel|looker|figma|jira|postgres(ql)?|mysql|mongodb|firebase|redis|snowflake|databricks|airflow|py ?spark|spark|hadoop|terraform|jenkins|linux|vs ?code|visual studio|intellij|xcode|jupyter|colab|bigquery|quicksight|microstrategy|chromadb)\b/i],
+  ["Analytics & Experimentation", /\b(a\/b test\w*|experiment\w*|hypothesis|regression|statistic\w*|forecast\w*|causal|qualitative coding|product analytics)\b/i],
+  ["Data & ML", /\b(etl|pipelines?|model\w*|recommendation|llm|error analysis|data clean\w*|data valid\w*|machine learning|deep learning|\bnlp\b|computer vision|tensorflow|pytorch|scikit)\b/i],
+  ["Product & Strategy", /\b(product strategy|roadmap\w*|user research|customer|market research|competitive analysis|cross-functional|stakeholder|go-to-market|prd|specification\w*|partnership)\b/i],
+];
+function classifySkillGroup(name) {
+  const n = String(name || "").trim();
+  for (const [group, re] of SKILL_GROUP_RULES) if (re.test(n)) return group;
+  return "Other";
+}
+// Flattens any {category: "a, b, c"} shape (or [{cat, vals}] array) into individual skills
+// and re-buckets them with classifySkillGroup, ignoring whatever category labels were stored —
+// so an imported bank's arbitrary category names never produce an inconsistent skills section.
+// Commas inside parentheses (e.g. "Azure (AZ-900, AI-900 Certified)") don't split the entry.
+function regroupSkills(skillsObjOrArray) {
+  const entries = Array.isArray(skillsObjOrArray) ? skillsObjOrArray.map((s) => [s.cat, s.vals]) : Object.entries(skillsObjOrArray || {});
+  const groups = {}; const order = [];
+  for (const [, vals] of entries) {
+    for (const raw of String(vals || "").split(/,(?![^(]*\))/)) {
+      const name = raw.trim();
+      if (!name) continue;
+      const g = classifySkillGroup(name);
+      if (!groups[g]) { groups[g] = []; order.push(g); }
+      groups[g].push(name);
+    }
+  }
+  return order.map((g) => ({ cat: g, vals: groups[g].join(", ") }));
+}
 const REQUESTED_TOOLS = /\b(tableau|looker|spark|pyspark|bigquery|snowflake|dbt|airflow|figma|jira|excel|scala|java|c\+\+|kotlin|tensorflow|pytorch|scikit-learn|aws|gcp|azure|docker|kubernetes|power bi)\b/g;
 function selectSkills(bank, track, jd, max = 12) {
   const banned = new Set((bank.prohibited || []).map((p) => p.toLowerCase()));
   const isBanned = (name) => banned.has(String(name).toLowerCase());
   const verified = (bank.verifiedSkills || []).filter((v) => !isBanned(v.name));
-  if (["product_management", "product_strategy", "ai_product"].includes(track)) {
-    const have = new Set(verified.map((v) => v.name.toLowerCase()));
-    const skills = Object.entries(PRODUCT_SKILL_TEMPLATE).map(([cat, names]) => ({ cat, vals: names.filter((n) => have.has(n.toLowerCase()) && !isBanned(n)).join(", ") })).filter((s) => s.vals);
-    const requested = [...String(jd || "").toLowerCase().matchAll(REQUESTED_TOOLS)].map((m) => m[1]);
-    return { skills, unsupported: [...new Set(requested)].filter((r) => !have.has(r)) };
-  }
   const priority = TRACK_SKILL_PRIORITY[track] || [];
   const jdl = String(jd || "").toLowerCase();
   const scoreOf = (s) => {
@@ -530,12 +556,14 @@ function selectSkills(bank, track, jd, max = 12) {
     return (p >= 0 ? (priority.length - p) : 0) + inJd * 3;
   };
   const chosen = verified.map((s) => ({ ...s, score: scoreOf(s) })).filter((s) => s.score > 0 || priority.length === 0).sort((a, b) => b.score - a.score);
-  const groups = {};
-  for (const s of chosen.slice(0, max)) (groups[s.group] ||= []).push(s.name);
+  // Group order follows selection order (most track-relevant group leads) rather than a fixed list,
+  // so a product-focused track naturally leads with Product & Strategy and a technical track with Languages.
+  const groups = {}; const order = [];
+  for (const s of chosen.slice(0, max)) { const g = classifySkillGroup(s.name); if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(s.name); }
   // Anything the posting names that the bank cannot back is reported, never listed.
-  const requested = [...jdl.matchAll(/\b(tableau|looker|spark|pyspark|bigquery|snowflake|dbt|airflow|figma|jira|excel|scala|java|c\+\+|kotlin|tensorflow|pytorch|scikit-learn|aws|gcp|azure|docker|kubernetes|power bi)\b/g)].map((m) => m[1]);
+  const requested = [...jdl.matchAll(REQUESTED_TOOLS)].map((m) => m[1]);
   const unsupported = [...new Set(requested)].filter((r) => !verified.some((v) => v.name.toLowerCase() === r));
-  return { skills: Object.entries(groups).map(([cat, vals]) => ({ cat, vals: vals.join(", ") })), unsupported };
+  return { skills: order.map((g) => ({ cat: g, vals: groups[g].join(", ") })), unsupported };
 }
 
 // ── Missing-item verdicts ───────────────────────────────────────────────
@@ -760,6 +788,6 @@ function validateNote(text, { limit = NOTE_LIMIT, name = "" } = {}) {
   return { text: t, length: t.length, ok: t.length <= limit && !BANNED_OUTREACH.test(t) && !/\[name\]/i.test(t), issues, hasValueProp: VALUE_PROP.test(t) };
 }
 
-const api = { SCORING_VERSION, WEIGHTS, CATEGORIES, CAPABILITIES, ROLE_WEIGHTS, TRACKS, TRACK_ORDER, TRACK_SKILL_PRIORITY, TRACK_CAP_WEIGHTS, classifyTrack, detectRoleType, orderForTrack, isChronological, duplicateBullets, dedupeSelection, copiedFromPosting, selectFacts, selectSkills, missingVerdict, qualityControl, applicationVerdict, suggestedQuestions, jaccard, evaluate, evaluateCapability, classify, bulletQuality, rankEntries, resumeUnits, factGuard, validateNote, shortenNote, fillName, NOTE_LIMIT, BANNED_OUTREACH };
+const api = { SCORING_VERSION, WEIGHTS, CATEGORIES, CAPABILITIES, ROLE_WEIGHTS, TRACKS, TRACK_ORDER, TRACK_SKILL_PRIORITY, TRACK_CAP_WEIGHTS, classifyTrack, detectRoleType, orderForTrack, isChronological, duplicateBullets, dedupeSelection, copiedFromPosting, selectFacts, selectSkills, classifySkillGroup, regroupSkills, missingVerdict, qualityControl, applicationVerdict, suggestedQuestions, jaccard, evaluate, evaluateCapability, classify, bulletQuality, rankEntries, resumeUnits, factGuard, validateNote, shortenNote, fillName, NOTE_LIMIT, BANNED_OUTREACH };
 if (typeof module !== "undefined") module.exports = api;
 if (typeof window !== "undefined") window.Scoring = api;

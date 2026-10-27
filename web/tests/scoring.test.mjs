@@ -137,7 +137,7 @@ test("bank-wide prohibited items block a claim under ANY entry, and don't affect
   // Without the bank argument (old call shape), the bank-wide list is simply not checked — no crash.
   assert.ok(S.factGuard(fact.text, fact, entry).ok);
   // Skills selection never lists a bank-wide-prohibited name even if verifiedSkills somehow contained one.
-  const withBanned = { ...EVIDENCE_BANK, verifiedSkills: [...EVIDENCE_BANK.verifiedSkills, { name: "Microsoft Word", group: "Tools & Platforms", evidence: "listed" }] };
+  const withBanned = { ...EVIDENCE_BANK, verifiedSkills: [...EVIDENCE_BANK.verifiedSkills, { name: "Microsoft Word", evidence: "listed" }] };
   const sk = S.selectSkills(withBanned, "ds_ml", "");
   assert.ok(!sk.skills.some((s) => /\bWord\b/.test(s.vals)));
 });
@@ -166,6 +166,46 @@ test("'bachelor's or higher' eligibility is matched by an in-progress bachelor's
   assert.equal(item.status, "matched");
   assert.equal(item.evidenceType, "direct");
   assert.match(item.evidence, /B\.A\./);
+});
+
+// Skill grouping is derived from the skill's own name, not a hand-typed label, so it works the
+// same way for any résumé — including one built by the import flow with no curated groups at all.
+test("classifySkillGroup buckets by name alone, with no reliance on a stored group field", () => {
+  assert.equal(S.classifySkillGroup("Python"), "Languages");
+  assert.equal(S.classifySkillGroup("C++"), "Languages");
+  assert.equal(S.classifySkillGroup("C#"), "Languages");
+  assert.equal(S.classifySkillGroup("R"), "Languages");
+  assert.equal(S.classifySkillGroup("Go-to-market strategy"), "Product & Strategy"); // bare "go" must not false-match Languages
+  assert.equal(S.classifySkillGroup("Power BI"), "Tools & Platforms");
+  assert.equal(S.classifySkillGroup("Docker"), "Tools & Platforms");
+  assert.equal(S.classifySkillGroup("A/B testing"), "Analytics & Experimentation");
+  assert.equal(S.classifySkillGroup("ETL pipelines"), "Data & ML");
+  assert.equal(S.classifySkillGroup("user research"), "Product & Strategy");
+  assert.equal(S.classifySkillGroup("Interpretive dance"), "Other");
+});
+
+// regroupSkills is what makes an imported résumé's arbitrary category names (or commas inside a
+// parenthetical like a certification) come out the same way the candidate's own bank does.
+test("regroupSkills ignores stored category labels and doesn't split on commas inside parentheses", () => {
+  const messy = {
+    Languages: "Java, Python, C/C++, SQL (Postgres), JavaScript, HTML/CSS",
+    "Developer Tools": "Git, Microsoft Azure (AZ-900, AI-900 Certified), Google Cloud Platform",
+  };
+  const out = S.regroupSkills(messy);
+  const flat = Object.fromEntries(out.map((g) => [g.cat, g.vals]));
+  assert.match(flat["Languages"], /\bC\/C\+\+/);
+  assert.match(flat["Languages"], /\bHTML\/CSS\b/);
+  assert.match(flat["Tools & Platforms"], /Microsoft Azure \(AZ-900, AI-900 Certified\)/, "parenthetical certification must survive as one entry");
+  assert.ok(!flat["Languages"].includes("AI-900"), "the cert note must not bleed into Languages");
+});
+
+// The old PM-track skills path used a separate hardcoded template (Product/Technical/Data & AI)
+// disconnected from the general classifier; it's gone now, so every track shares one pipeline.
+test("selectSkills groups product-track skills with the same classifier as technical tracks", () => {
+  const pm = S.selectSkills(EVIDENCE_BANK, "product_management", "");
+  const byCat = Object.fromEntries(pm.skills.map((g) => [g.cat, g.vals]));
+  assert.ok(byCat["Product & Strategy"], "product skills must be grouped under Product & Strategy");
+  assert.ok(!["Product", "Technical", "Data & AI"].some((c) => c in byCat), "the old PRODUCT_SKILL_TEMPLATE category names must not appear");
 });
 
 // Degree matches from Education, not from bullets.
