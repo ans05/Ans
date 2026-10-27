@@ -137,7 +137,7 @@ test("bank-wide prohibited items block a claim under ANY entry, and don't affect
   // Without the bank argument (old call shape), the bank-wide list is simply not checked — no crash.
   assert.ok(S.factGuard(fact.text, fact, entry).ok);
   // Skills selection never lists a bank-wide-prohibited name even if verifiedSkills somehow contained one.
-  const withBanned = { ...EVIDENCE_BANK, verifiedSkills: [...EVIDENCE_BANK.verifiedSkills, { name: "Microsoft Word", group: "Product & Tools", evidence: "listed" }] };
+  const withBanned = { ...EVIDENCE_BANK, verifiedSkills: [...EVIDENCE_BANK.verifiedSkills, { name: "Microsoft Word", group: "Tools & Platforms", evidence: "listed" }] };
   const sk = S.selectSkills(withBanned, "ds_ml", "");
   assert.ok(!sk.skills.some((s) => /\bWord\b/.test(s.vals)));
 });

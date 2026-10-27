@@ -162,8 +162,9 @@ const EVIDENCE_BANK = {
   skills: {
     Languages: "Python (pandas, NumPy), SQL, R, Swift",
     "Data & ML": "ETL pipelines, data cleaning & validation, recommendation systems, model evaluation, error analysis, LLM evaluation, PostgreSQL",
-    "Analytics & Experimentation": "A/B testing, experimental design, hypothesis testing, regression analysis, qualitative coding, product analytics",
-    "Product & Tools": "product roadmapping, user research, competitive analysis, customer journey mapping, Git, Power BI, Microsoft Azure",
+    "Analytics & Experimentation": "A/B testing, experimental design, hypothesis testing, regression analysis, qualitative coding, product analytics, forecasting",
+    "Tools & Platforms": "Git, Power BI, Tableau, Microsoft Excel, Microsoft Azure",
+    "Product & Strategy": "product roadmapping, user research, competitive analysis, customer journey mapping, cross-functional collaboration",
   },
   // Every skill the candidate may list, with the evidence that backs it. Anything not here is never listed.
   verifiedSkills: [
@@ -178,13 +179,13 @@ const EVIDENCE_BANK = {
     { name: "hypothesis testing", group: "Analytics & Experimentation", evidence: "haas.hypotheses" }, { name: "regression analysis", group: "Analytics & Experimentation", evidence: "haas.regression" },
     { name: "statistical modeling", group: "Analytics & Experimentation", evidence: "haas.regression" }, { name: "qualitative coding", group: "Analytics & Experimentation", evidence: "haas.coding" },
     { name: "product analytics", group: "Analytics & Experimentation", evidence: "gk.abtests" },
-    { name: "product strategy", group: "Product & Tools", evidence: "gk.nami" }, { name: "product roadmapping", group: "Product & Tools", evidence: "siemens.roadmap" }, { name: "roadmapping", group: "Product & Tools", evidence: "siemens.roadmap" },
-    { name: "user research", group: "Product & Tools", evidence: "gk.ownership" }, { name: "customer discovery", group: "Product & Tools", evidence: "siemens.journey" },
-    { name: "customer journey mapping", group: "Product & Tools", evidence: "siemens.journey" }, { name: "market research", group: "Product & Tools", evidence: "siemens.partnerships" },
-    { name: "competitive analysis", group: "Product & Tools", evidence: "siemens.competitive" }, { name: "experimentation", group: "Product & Tools", evidence: "gk.abtests" },
-    { name: "cross-functional collaboration", group: "Product & Tools", evidence: "siemens.crossfn" },
-    { name: "Git", group: "Product & Tools", evidence: "listed" }, { name: "Power BI", group: "Product & Tools", evidence: "haas.forecasting" }, { name: "Microsoft Azure", group: "Product & Tools", evidence: "listed" },
-    { name: "Tableau", group: "Product & Tools", evidence: "listed" }, { name: "Microsoft Excel", group: "Product & Tools", evidence: "listed" },
+    { name: "product strategy", group: "Product & Strategy", evidence: "gk.nami" }, { name: "product roadmapping", group: "Product & Strategy", evidence: "siemens.roadmap" }, { name: "roadmapping", group: "Product & Strategy", evidence: "siemens.roadmap" },
+    { name: "user research", group: "Product & Strategy", evidence: "gk.ownership" }, { name: "customer discovery", group: "Product & Strategy", evidence: "siemens.journey" },
+    { name: "customer journey mapping", group: "Product & Strategy", evidence: "siemens.journey" }, { name: "market research", group: "Product & Strategy", evidence: "siemens.partnerships" },
+    { name: "competitive analysis", group: "Product & Strategy", evidence: "siemens.competitive" }, { name: "experimentation", group: "Product & Strategy", evidence: "gk.abtests" },
+    { name: "cross-functional collaboration", group: "Product & Strategy", evidence: "siemens.crossfn" },
+    { name: "Git", group: "Tools & Platforms", evidence: "listed" }, { name: "Power BI", group: "Tools & Platforms", evidence: "haas.forecasting" }, { name: "Microsoft Azure", group: "Tools & Platforms", evidence: "listed" },
+    { name: "Tableau", group: "Tools & Platforms", evidence: "listed" }, { name: "Microsoft Excel", group: "Tools & Platforms", evidence: "listed" },
     { name: "forecasting", group: "Analytics & Experimentation", evidence: "haas.forecasting" },
   ],
   // Listed on the original résumé without a supporting bullet; kept only because the candidate confirmed them.
