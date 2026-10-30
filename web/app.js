@@ -12,6 +12,8 @@ const els = {
   trackDetected: $("track-detected"), trackSelect: $("track-select"), relevanceOrder: $("relevance-order"),
   checks: $("checks"), verdict: $("verdict"),
   importText: $("import-text"), importBuild: $("import-build"), importStatus: $("import-status"),
+  qa: $("qa"), qaBody: $("qa-body"), qaTitle: $("qa-title"), qaLead: $("qa-lead"), qaStatus: $("qa-status"),
+  qaPrimary: $("qa-primary"), qaSkip: $("qa-skip"), qaBack: $("qa-back"), qaCancel: $("qa-cancel"),
 };
 const S = window.Scoring;
 
@@ -19,7 +21,7 @@ const S = window.Scoring;
 // viewer imported in Settings. Every tailoring, scoring, and skills call reads from it, so
 // swapping it swaps whose résumé the whole tool produces.
 let state = {
-  bank: EVIDENCE_BANK, bankCustomized: false,
+  bank: EVIDENCE_BANK, rawBank: EVIDENCE_BANK, bankCustomized: false,
   base: DEFAULT_RESUME, doc: null, claudeVersion: null, pdfUrl: null,
   sample: undefined, downloads: undefined, ctl: null,
   reqs: null,          // { key, items: [{statement, category, capabilities, keywords}] }
@@ -59,7 +61,8 @@ const store = {
 
 function load() {
   state.bankCustomized = !!store.get("bankCustomized");
-  state.bank = state.bankCustomized ? (store.get("customBank") || EVIDENCE_BANK) : EVIDENCE_BANK;
+  state.rawBank = state.bankCustomized ? (store.get("customBank") || EVIDENCE_BANK) : EVIDENCE_BANK;
+  state.bank = S.applyAnswers(state.rawBank, store.get("answers"));
   state.base = resumeFromBank(state.bank);
   if (store.get("jobHidden")) setJobHidden(true);
   const last = store.get("lastResult");
@@ -158,7 +161,7 @@ ${JSON.stringify(bankForPrompt(), null, 1)}
 
 Skills the candidate may list (choose and reorder from these only):
 ${JSON.stringify(state.bank.skills)}
-
+${(state.bank.declined || []).length ? `\nThe candidate has confirmed they do NOT have: ${state.bank.declined.map((d) => d.label).join("; ")}. Never state or imply any of these.\n` : ""}
 Job description:
 ${jd.slice(0, 12000)}
 
@@ -253,6 +256,14 @@ els.tailor.addEventListener("click", async () => {
   if (jd.length < 80) { setStatus("Paste the full job description first.", "error"); return; }
   const reqs = await ensureRequirements(jd);
   if (!reqs) return;
+  if (!state.reqs.qaDone) {
+    const qs = openQuestions();
+    if (qs.length) {
+      setStatus("A few quick questions first — what you answer becomes verified facts for this tailoring.");
+      if ((await runQA(qs, { tailoring: true })) === "cancel") { setStatus("Cancelled. Click Tailor when you're ready."); return; }
+    }
+    state.reqs.qaDone = true; persist();
+  }
   const ranked = S.rankEntries(state.base, scoredCapabilityIds(), effectiveTrack());
   const sel = await ask(tailorPrompt(jd, ranked), { btn: els.tailor, statusEl: els.status, busyMsg: "Tailoring from your verified evidence bank — usually 15–40 seconds…", validate: validTailored });
   if (!sel) return;
@@ -281,8 +292,8 @@ Categories:
 - preferred_qualification: nice-to-have / bonus / "exceptional candidates"
 - responsibility: what the intern will do ("you will", "what you'll do")
 - company_language: mission, culture, "every day millions of people…"
-- logistics: visa/work authorization, location, hours, pay, dates
-- subjective_trait: passion, curiosity, enthusiasm, "delight users" — traits that cannot be verified from a résumé
+- logistics: visa/work authorization, location, hours, pay, dates; who the role is aimed at (career stage, student or military status, "best suited to…"); prerequisites such as finishing a course or submitting proof with the application
+- subjective_trait: passion, curiosity, enthusiasm, "delight users"; and philosophy or advice written to the reader ("your job isn't done when…", "make sure your work survives you") — traits and values that cannot be verified from a résumé
 
 Rules: split compound statements so that each capability is its own item (e.g. "write specifications, experimentation plans and go-to-market briefs" → three items). A degree/field requirement is required_qualification with capability degree_related_field. Use only capability ids from this list; if none fits, leave capabilities empty and rely on keywords:
 ${CAP_LIST}
@@ -409,8 +420,8 @@ function renderScore() {
   const missingList = r.missing.length ? `
     <div class="sub-label">Missing qualifications (${r.missing.length})</div>
     <ul class="checks">${r.missing.map((i) => `<li class="miss"><span class="mark">${i.verdict?.startsWith("Not") ? "✗" : "?"}</span><span class="req"><span>${esc(i.label || i.statement)}</span><span class="ev"><b>${esc(i.verdict || "Missing")}</b> — ${esc(i.why || "")}</span></span></li>`).join("")}</ul>` : "";
-  const questions = S.suggestedQuestions(r, state.bank);
-  const qList = questions.length ? `<div class="sub-label">Questions you can answer to strengthen this résumé (${questions.length})</div><ol class="sugg">${questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>` : "";
+  const questions = openQuestions();
+  const qList = questions.length ? `<div class="sub-label">Questions you can answer to strengthen this résumé (${questions.length}) <button class="btn tiny" type="button" id="answer-now">Answer now</button></div><ol class="sugg">${questions.map((q) => `<li>${esc(S.questionText(q))}</li>`).join("")}</ol>` : "";
   const v = S.applicationVerdict(r, state.qc);
 
   els.scoreOut.innerHTML = `
@@ -432,6 +443,170 @@ function renderScore() {
   const bankable = [...r.missing, ...r.partial].some((i) => i.capability && bankFactsFor(i.capability).some((c) => !onPage(c.fact.id)));
   els.improve.hidden = !bankable;
   document.getElementById("apply-order")?.addEventListener("click", () => { applyRanking(state.doc); renderEditor(); refreshPdf(); rescore(); persist(); });
+  document.getElementById("answer-now")?.addEventListener("click", answerNow);
+}
+
+// ── Questions, answered inside the tailoring flow ────────────────────────
+// A question is something the posting asks for that the whole evidence bank can't back. What the
+// candidate writes becomes a fact in their own bank — kept in this browser as an overlay on the
+// built-in bank, so later built-in updates still apply. Nothing is inferred: a drafted bullet may
+// only contain numbers and tools their answer contains, and they review and edit every bullet
+// before it is saved.
+
+const QA = { items: [], answers: [], drafts: [], stage: "answer", tailoring: true, done: null, result: null };
+
+function gapResult() {
+  if (!state.reqs?.items) return null;
+  return S.evaluate(state.reqs.items, state.base, { track: effectiveTrack(), jd: els.jd.value, bank: state.bank, relevanceOrdering: state.relevanceOrdering });
+}
+function openQuestions() { const r = gapResult(); return r ? S.suggestedQuestionItems(r, state.bank) : []; }
+
+function draftPrompt(answered) {
+  const entries = state.bank.entries.map((e) => ({ id: e.id, kind: e.kind, org: e.org, role: e.role }));
+  return `Turn the candidate's own answers into résumé bullets. Use ONLY what each answer states. Never add a number, tool, employer, date, team size, scale, or outcome the answer does not contain, and never make the work sound bigger than described. If an answer says it never happened or doesn't apply, set "skip": true.
+
+Entries on the résumé:
+${JSON.stringify(entries)}
+
+Answers:
+${JSON.stringify(answered.map((a) => ({ n: a.i + 1, question: a.q.label, entryId: a.q.entryId || null, answer: a.text.slice(0, 1500) })), null, 1)}
+
+Reply with only JSON: {"drafts": [{"n": <answer number>, "entryId": "<id of the entry where it happened, or null if the answer names none of them>", "text": "<one bullet>", "skip": false}]}
+Each bullet: strong past-tense action verb → what was done and how → the scale or result only if the answer gives one. Under 180 characters, no label prefixes, natural résumé language.`;
+}
+
+const entryOptions = (selectedId) => `<option value="">Where did this happen?</option>${state.bank.entries.map((e) => `<option value="${esc(e.id)}"${e.id === selectedId ? " selected" : ""}>${esc(e.org)} — ${esc(e.role)}</option>`).join("")}`;
+
+function renderQA() {
+  const n = QA.items.length;
+  if (QA.stage === "answer") {
+    els.qaTitle.textContent = `${n} quick question${n === 1 ? "" : "s"}${QA.tailoring ? " before tailoring" : ""}`;
+    els.qaLead.textContent = "These are things the posting asks for that your evidence bank can't back yet. Answer only what's true — your words become verified facts. Leave anything blank to skip it.";
+    els.qaBody.innerHTML = QA.items.map((q, i) => `
+      <div class="qa-item" data-i="${i}">
+        <div class="qa-q"><b>${esc(q.label)}</b>${q.source === "posting" && q.statement && q.statement !== q.label ? `<span class="hint">from the posting: “${esc(q.statement)}”</span>` : ""}</div>
+        <textarea class="qa-a" rows="2" placeholder="Where, when, what you did, and any numbers you can verify…"${QA.answers[i].no ? " disabled" : ""}>${esc(QA.answers[i].text)}</textarea>
+        <label class="inline hint"><input type="checkbox" class="qa-no"${QA.answers[i].no ? " checked" : ""}> ${q.source === "bank" ? "I can't confirm this — don't claim it" : "I don't have this"}</label>
+      </div>`).join("");
+  } else {
+    els.qaTitle.textContent = "Review the bullets I'll add";
+    els.qaLead.textContent = "Edit anything. Each bullet is saved to your evidence bank exactly as written here, and only then can it appear on a résumé.";
+    els.qaBody.innerHTML = QA.drafts.map((d, i) => !d ? "" : `
+      <div class="qa-item" data-i="${i}">
+        <div class="qa-q"><b>${esc(d.q.label)}</b></div>
+        <textarea class="qa-draft" rows="2">${esc(d.text)}</textarea>
+        <div class="qa-row">
+          <select class="qa-entry"${d.q.entryId ? " disabled" : ""}>${entryOptions(d.entryId)}</select>
+          <label class="inline hint"><input type="checkbox" class="qa-skipcard"${d.skip ? " checked" : ""}> Don't add</label>
+        </div>
+        ${d.warn ? `<div class="qa-warn">${esc(d.warn)}</div>` : ""}
+      </div>`).join("");
+  }
+  els.qaBack.hidden = QA.stage === "answer";
+  els.qaSkip.textContent = QA.tailoring ? "Skip questions & tailor" : "Not now";
+  els.qaSkip.hidden = QA.stage !== "answer";
+  syncQA();
+}
+
+function syncQA() {
+  if (QA.stage === "answer") {
+    const answered = QA.answers.filter((a) => a.text.trim() && !a.no).length;
+    const declined = QA.answers.filter((a) => a.no).length;
+    els.qaPrimary.disabled = !answered && !declined;
+    els.qaPrimary.textContent = answered ? `Draft ${answered} bullet${answered === 1 ? "" : "s"} from my answers` : declined ? (QA.tailoring ? "Remember these & tailor" : "Remember these") : (QA.tailoring ? "Answer above to continue" : "Answer above");
+    return;
+  }
+  const live = QA.drafts.filter((d) => d && !d.skip);
+  const incomplete = live.some((d) => !d.text.trim() || !d.entryId);
+  const declined = QA.answers.some((a) => a.no);
+  els.qaPrimary.disabled = incomplete || (!live.length && !declined);
+  els.qaPrimary.textContent = QA.tailoring ? "Add to evidence bank & tailor" : "Add to evidence bank";
+  if (incomplete) setText(els.qaStatus, "Choose where each bullet happened (or tick “Don't add”).", "");
+  else if (els.qaStatus.textContent.startsWith("Choose where")) setText(els.qaStatus, "");
+}
+
+function runQA(items, { tailoring }) {
+  return new Promise((resolve) => {
+    Object.assign(QA, { items, answers: items.map(() => ({ text: "", no: false })), drafts: [], stage: "answer", tailoring, result: null, done: resolve });
+    setText(els.qaStatus, "");
+    renderQA();
+    els.qa.showModal();
+  });
+}
+els.qa.addEventListener("close", () => { const r = QA.done; QA.done = null; if (r) r(QA.result || "cancel"); });
+els.qaCancel.addEventListener("click", () => els.qa.close());
+els.qaSkip.addEventListener("click", () => { QA.result = "skipped"; els.qa.close(); });
+els.qaBack.addEventListener("click", () => { QA.stage = "answer"; renderQA(); });
+
+const onQAInput = (e) => {
+  const card = e.target.closest(".qa-item"); if (!card) return;
+  const i = Number(card.dataset.i), c = e.target.classList;
+  if (QA.stage === "answer") {
+    if (c.contains("qa-a")) QA.answers[i].text = e.target.value;
+    if (c.contains("qa-no")) { QA.answers[i].no = e.target.checked; card.querySelector(".qa-a").disabled = e.target.checked; }
+  } else if (QA.drafts[i]) {
+    if (c.contains("qa-draft")) QA.drafts[i].text = e.target.value;
+    if (c.contains("qa-entry")) QA.drafts[i].entryId = e.target.value;
+    if (c.contains("qa-skipcard")) QA.drafts[i].skip = e.target.checked;
+  }
+  syncQA();
+};
+els.qaBody.addEventListener("input", onQAInput);
+els.qaBody.addEventListener("change", onQAInput);
+
+els.qaPrimary.addEventListener("click", async () => {
+  if (QA.stage === "review") { qaCommit(); return; }
+  const answered = QA.items.map((q, i) => ({ q, i, text: QA.answers[i].text.trim() })).filter((a) => a.text && !QA.answers[a.i].no);
+  if (!answered.length) { qaCommit(); return; }
+  const out = await ask(draftPrompt(answered), { btn: els.qaPrimary, statusEl: els.qaStatus, busyMsg: "Drafting bullets from your answers…", validate: (o) => Array.isArray(o?.drafts) });
+  QA.drafts = QA.items.map(() => null);
+  for (const a of answered) {
+    const d = out?.drafts?.find((x) => Number(x.n) === a.i + 1);
+    const entryId = a.q.entryId || (d && state.bank.entries.some((e) => e.id === d.entryId) ? d.entryId : "");
+    let text = "", warn = "", skip = false;
+    if (d && !d.skip && d.text) {
+      const v = S.validateDraft(d.text, a.text);
+      if (v.ok) text = d.text.trim(); else warn = `I couldn't verify my draft against your answer (${v.problems.join("; ")}), so this is your own wording — shorten it into one bullet.`;
+    } else if (d?.skip) { skip = true; warn = "Your answer reads like “no”, so I left it out. Untick “Don't add” to keep it anyway."; }
+    if (!text) { text = a.text; warn ||= out ? "Couldn't draft this one — this is your own wording; shorten it into one bullet." : "Claude wasn't available, so this is your own wording — shorten it into one bullet."; }
+    QA.drafts[a.i] = { q: a.q, text, entryId, warn, skip };
+  }
+  QA.stage = "review";
+  if (out) setText(els.qaStatus, "");
+  renderQA();
+});
+
+function qaCommit() {
+  const overlay = store.get("answers") || {};
+  for (const k of ["facts", "declined", "resolved", "answered"]) overlay[k] ||= [];
+  let added = 0;
+  QA.items.forEach((q, i) => {
+    const a = QA.answers[i], d = QA.drafts[i];
+    if (a.no) {
+      if (q.source === "bank") overlay.resolved.push({ entryId: q.entryId, question: q.question });
+      else overlay.declined.push({ key: q.key, label: q.label });
+    } else if (d && !d.skip && d.text.trim() && d.entryId) {
+      const text = d.text.trim(), { metrics, tools } = S.statedTerms(text);
+      overlay.facts.push({ entryId: d.entryId, fact: { id: `ans.${d.entryId}.${Date.now().toString(36)}${i}`, text, metrics, tools, tags: [...new Set([...S.inferTags(text), ...(q.capability ? [q.capability] : [])])] } });
+      overlay.answered.push(q.key);
+      if (q.source === "bank") overlay.resolved.push({ entryId: q.entryId, question: q.question });
+      added++;
+    }
+  });
+  store.set("answers", overlay);
+  state.bank = S.applyAnswers(state.rawBank, overlay);
+  state.base = resumeFromBank(state.bank);
+  if (state.reqs) state.reqs.key = cacheKey(els.jd.value);   // the posting didn't change, only the bank did
+  QA.result = "answered"; QA.added = added;
+  els.qa.close();
+}
+
+async function answerNow() {
+  const items = openQuestions();
+  if (!items.length) return;
+  if ((await runQA(items, { tailoring: false })) !== "answered") return;
+  rescore(); persist();
+  toast(QA.added ? `Saved ${QA.added} fact${QA.added === 1 ? "" : "s"} to your evidence bank. Use “Improve with verified facts” or Tailor to put ${QA.added === 1 ? "it" : "them"} on the page.` : "Saved.", "ok");
 }
 
 // ── Outreach ─────────────────────────────────────────────────────────────
@@ -773,9 +948,13 @@ els.save.addEventListener("click", () => {
   let bank;
   try { bank = JSON.parse(els.baseResume.value); validateBank(bank); }
   catch (e) { els.settingsStatus.textContent = `Evidence bank JSON is invalid: ${e.message}`; els.settingsStatus.className = "status error"; return; }
-  const customized = JSON.stringify(bank) !== JSON.stringify(EVIDENCE_BANK);
-  state.bank = bank; state.bankCustomized = customized;
-  store.set("customBank", bank); store.set("bankCustomized", customized);
+  const json = JSON.stringify(bank), answers = store.get("answers");
+  // Opening Settings and pressing Save without editing must not freeze the bank or discard the work in progress.
+  if (!state.bankCustomized && json === JSON.stringify(S.applyAnswers(EVIDENCE_BANK, answers))) { els.settings.close(); return; }
+  const customized = json !== JSON.stringify(EVIDENCE_BANK);
+  store.set("answers", null);   // either folded into this JSON (what Settings showed) or deliberately reset
+  state.rawBank = customized ? bank : EVIDENCE_BANK; state.bank = state.rawBank; state.bankCustomized = customized;
+  store.set("customBank", customized ? bank : null); store.set("bankCustomized", customized);
   state.base = resumeFromBank(bank);
   state.trackOverride = ""; els.trackSelect.value = "";
   state.reqs = null; state.result = null; state.targets = null; state.claudeVersion = null;

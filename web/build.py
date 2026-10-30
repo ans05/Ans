@@ -114,6 +114,13 @@ label.inline { display: inline-flex; align-items: center; gap: 4px; cursor: poin
 .target input[type="text"] { padding: 5px 8px; font-size: 13px; }
 .settings-form #import-text { min-height: 90px; }
 .settings-form .actions #import-status { flex: 1; min-width: 0; }
+.qa-list { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 2px; }
+.qa-item { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.qa-q { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.qa-form textarea { font-family: inherit; font-size: 13px; min-height: 52px; flex: none; }
+.qa-row { display: flex; gap: 10px; align-items: center; }
+.qa-row select { flex: 1; min-width: 0; }
+.qa-warn { font-size: 12px; color: var(--danger); }
 .settings-form code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.92em; background: var(--bg); padding: 1px 4px; border-radius: 4px; }
 ul.checks .req { display: flex; flex-direction: column; gap: 1px; }
 ul.checks .ev { font-size: 12px; color: var(--muted); }
@@ -253,6 +260,22 @@ html = f"""<title>Resume Tailor</title>
       <button class="btn primary" type="button" id="save-settings">Save</button>
     </div>
     <p id="settings-status" class="status"></p>
+  </form>
+</dialog>
+
+<dialog id="qa">
+  <form method="dialog" class="settings-form qa-form">
+    <h2 id="qa-title">Quick questions</h2>
+    <p id="qa-lead" class="hint lead"></p>
+    <div id="qa-body" class="qa-list"></div>
+    <p id="qa-status" class="status"></p>
+    <div class="actions">
+      <button id="qa-back" class="btn ghost" type="button" hidden>Back</button>
+      <button id="qa-cancel" class="btn ghost" type="button">Cancel</button>
+      <span class="spacer"></span>
+      <button id="qa-skip" class="btn ghost" type="button">Skip questions &amp; tailor</button>
+      <button id="qa-primary" class="btn primary" type="button">Answer above</button>
+    </div>
   </form>
 </dialog>
 

@@ -13,7 +13,7 @@ const EVIDENCE_BANK = {
   version: 2,
   // Applies to every entry, regardless of which one a bullet is under — confirmed 2026-09-30:
   // don't claim these tools until explicitly confirmed, even if a future edit adds them elsewhere.
-  prohibited: ["Microsoft PowerPoint", "Microsoft Word"],
+  prohibited: ["Microsoft PowerPoint", "Microsoft Word", "Jira"],
   profile: {
     name: "Aneesh Srirambhatla",
     phone: "424-390-9605",
@@ -163,7 +163,7 @@ const EVIDENCE_BANK = {
     Languages: "Python (pandas, NumPy), SQL, R, Swift",
     "Data & ML": "ETL pipelines, data cleaning & validation, recommendation systems, model evaluation, error analysis, LLM evaluation, PostgreSQL",
     "Analytics & Experimentation": "A/B testing, experimental design, hypothesis testing, regression analysis, qualitative coding, product analytics, forecasting",
-    "Tools & Platforms": "Git, Power BI, Tableau, Microsoft Excel, Microsoft Azure",
+    "Tools & Platforms": "Git, GitHub, Power BI, Tableau, Microsoft Excel, Microsoft Azure",
     "Product & Strategy": "product roadmapping, user research, competitive analysis, customer journey mapping, cross-functional collaboration",
   },
   // Every skill the candidate may list, with the evidence that backs it. Anything not here is never listed.
@@ -186,12 +186,13 @@ const EVIDENCE_BANK = {
     { name: "customer journey mapping", evidence: "siemens.journey" }, { name: "market research", evidence: "siemens.partnerships" },
     { name: "competitive analysis", evidence: "siemens.competitive" }, { name: "experimentation", evidence: "gk.abtests" },
     { name: "cross-functional collaboration", evidence: "siemens.crossfn" },
-    { name: "Git", evidence: "listed" }, { name: "Power BI", evidence: "haas.forecasting" }, { name: "Microsoft Azure", evidence: "listed" },
+    { name: "Git", evidence: "coursework" }, { name: "GitHub", evidence: "coursework" }, { name: "Power BI", evidence: "haas.forecasting" }, { name: "Microsoft Azure", evidence: "listed" },
     { name: "Tableau", evidence: "listed" }, { name: "Microsoft Excel", evidence: "listed" },
     { name: "forecasting", evidence: "haas.forecasting" },
   ],
   // Listed on the original résumé without a supporting bullet; kept only because the candidate confirmed them.
-  unevidencedSkills: ["Microsoft Azure", "Git", "PostgreSQL", "pandas", "NumPy", "Tableau", "Microsoft Excel"],
+  // (Git/GitHub moved out: confirmed as source control used in Berkeley programming coursework — evidence "coursework".)
+  unevidencedSkills: ["Microsoft Azure", "PostgreSQL", "pandas", "NumPy", "Tableau", "Microsoft Excel"],
 };
 
 // The rendered base résumé, derived from the bank so the two can never disagree.

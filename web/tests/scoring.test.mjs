@@ -128,7 +128,7 @@ test("classification separates subjective traits from analytical requirements", 
 
 // A bank-wide prohibited list applies to every entry, not just the one it's declared on.
 test("bank-wide prohibited items block a claim under ANY entry, and don't affect unrelated entries", () => {
-  assert.deepEqual(EVIDENCE_BANK.prohibited, ["Microsoft PowerPoint", "Microsoft Word"]);
+  assert.deepEqual(EVIDENCE_BANK.prohibited, ["Microsoft PowerPoint", "Microsoft Word", "Jira"]);
   const entry = EVIDENCE_BANK.entries.find((e) => e.id === "haas");
   const fact = entry.facts.find((f) => f.id === "haas.comms");
   const bad = S.factGuard("Presented experimental results in Microsoft PowerPoint decks to 2 faculty PIs", fact, entry, EVIDENCE_BANK);
@@ -224,4 +224,70 @@ test("millions-of-users scale is not fully matched by a 100+ user launch", () =>
   assert.equal(cap("scale_millions", DEFAULT_RESUME), "partially_matched"); // 10,000+ predictions
   assert.equal(cap("scale_millions", one("Built and shipped an iOS app used by 100+ athletes")), "missing");
   assert.equal(cap("scale_millions", one("Shipped a feature used by 2M users")), "matched");
+});
+
+// Values / audience copy and course prerequisites are not résumé requirements, so they must never
+// reach the candidate as "have you ___?" questions — while real gaps still do.
+test("narrative, audience and prerequisite sentences are not scored; real requirements still are", () => {
+  const notScored = [
+    "your job isn't done when the tool works; it's done when someone else can own it.",
+    "your job isn’t done when the tool works; it’s done when someone else can own it.",
+    "make sure your work survives you.",
+    "cut the part of the demo that isn't landing.",
+    "finishing or have just finished a degree or trade program and looking for your first full-time role.",
+    "transitioning out of military service into your first civilian career.",
+    "in your first full-time job and looking to move into mission-driven work.",
+    "best suited to people who don’t yet have several years of experience.",
+    "can say what you learned from time in or around nonprofits, public service, or civic tech.",
+    "completion of AI Fluency and Claude 101, with proof of completion submitted with the application.",
+  ];
+  for (const statement of notScored) assert.ok(["logistics", "company_language"].includes(S.classify({ statement, category: "required_qualification", capabilities: [] })), statement);
+  for (const statement of ["Build internal tools", "have hands-on time with agent frameworks", "Experience transitioning from legacy systems to the cloud"]) {
+    assert.equal(S.classify({ statement, category: "required_qualification", capabilities: [] }), "required_qualification", statement);
+  }
+});
+
+test("questions are real gaps in the whole bank, minus anything already answered or declined", () => {
+  const base = require("../../extension/resume-data.js").resumeFromBank(EVIDENCE_BANK);
+  const items = [
+    { statement: "Build internal tools", category: "responsibility", capabilities: [], keywords: ["internal tools"] },
+    { statement: "Conduct user research", category: "responsibility", capabilities: ["user_research"] }, // the bank already evidences this
+    { statement: "Build mobile apps in Kotlin", category: "preferred_qualification", capabilities: [], keywords: ["Kotlin"] },
+  ];
+  const ask = (bank) => S.suggestedQuestionItems(S.evaluate(items, base, { bank }), bank);
+  assert.deepEqual(ask(EVIDENCE_BANK).map((q) => q.label), ["Build internal tools", "Build mobile apps in Kotlin"]);
+  const after = S.applyAnswers(EVIDENCE_BANK, { declined: [{ key: "stmt:build mobile apps in kotlin", label: "Build mobile apps in Kotlin" }], answered: ["stmt:build internal tools"] });
+  assert.deepEqual(ask(after), []);
+  // A declined item is a settled "no" in the scoring, not a standing "needs confirmation".
+  const declinedItem = S.evaluate(items, base, { bank: after }).items.find((i) => /Kotlin/.test(i.statement));
+  assert.equal(declinedItem.verdict, "Not evidenced — do not add");
+  assert.match(declinedItem.why, /you confirmed you don't have this/);
+});
+
+test("applyAnswers merges facts and resolutions without mutating the bank, and is idempotent", () => {
+  const before = JSON.stringify(EVIDENCE_BANK);
+  const fact = { id: "ans.mercor.x1", text: "Built an internal dashboard used by 20 analysts", metrics: ["20"], tools: [], tags: [] };
+  const overlay = { facts: [{ entryId: "mercor", fact }, { entryId: "gone", fact: { ...fact, id: "ans.gone.1" } }], resolved: [{ entryId: "siemens", question: "q" }] };
+  const a = S.applyAnswers(EVIDENCE_BANK, overlay);
+  assert.equal(JSON.stringify(EVIDENCE_BANK), before, "input bank untouched");
+  const mercor = (b) => b.entries.find((e) => e.id === "mercor");
+  assert.equal(mercor(a).facts.length, mercor(EVIDENCE_BANK).facts.length + 1);
+  assert.equal(JSON.stringify(S.applyAnswers(a, overlay)), JSON.stringify(a), "re-applying changes nothing");
+  assert.ok(!a.entries.some((e) => e.facts.some((f) => f.id === "ans.gone.1")), "a fact for an entry that no longer exists is ignored");
+  assert.equal(S.applyAnswers(EVIDENCE_BANK, null), EVIDENCE_BANK);
+  const withQuestion = { ...EVIDENCE_BANK, entries: EVIDENCE_BANK.entries.map((e) => (e.id === "siemens" ? { ...e, needsConfirmation: ["q", "keep"] } : e)) };
+  assert.deepEqual(S.applyAnswers(withQuestion, overlay).entries.find((e) => e.id === "siemens").needsConfirmation, ["keep"]);
+});
+
+test("a drafted bullet may only contain numbers and tools the candidate's answer contains", () => {
+  const answer = "I built an internal dashboard that 20 analysts used to track LLM review queues.";
+  assert.equal(S.validateDraft("Built an internal dashboard used by 20 analysts to track LLM review queues", answer).ok, true);
+  assert.equal(S.validateDraft("Built an internal dashboard used by 20+ analysts", answer).ok, true, "a trailing + is the same number");
+  const bad = S.validateDraft("Built 5 dashboards in Tableau used by 200 analysts", answer);
+  assert.equal(bad.ok, false);
+  assert.ok(bad.problems.some((p) => /number “5”/.test(p)) && bad.problems.some((p) => /number “200”/.test(p)) && bad.problems.some((p) => /tool “Tableau”/.test(p)));
+  assert.equal(S.validateDraft("", answer).ok, false);
+  assert.equal(S.validateDraft("x".repeat(230), answer).ok, false);
+  assert.deepEqual(S.statedTerms("Built a dashboard in Python for 20+ analysts"), { metrics: ["20+"], tools: ["Python"] });
+  assert.ok(S.inferTags("Designed and analyzed A/B tests for an iOS app used by 100+ athletes").includes("experimentation"));
 });

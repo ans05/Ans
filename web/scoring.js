@@ -4,7 +4,7 @@
 // One canonical result from evaluate() drives every number and section the
 // UI shows. Statuses: matched | partially_matched | missing | not_scorable.
 
-const SCORING_VERSION = "4.0";
+const SCORING_VERSION = "4.1";
 
 // Weights (percent). Buckets with no scorable items redistribute their weight
 // proportionally to the buckets that do have items.
@@ -16,8 +16,12 @@ const CATEGORIES = ["required_qualification", "preferred_qualification", "respon
 const SCORED = new Set(["required_qualification", "preferred_qualification", "responsibility"]);
 
 const SUBJECTIVE = /\b(passion(ate)?|enthusias|curious|curiosity|excited|love (of|for)|self-starter|team player|positive attitude|fun|delight|humble|hungry|scrappy|growth mindset)\b/i;
-const LOGISTICS = /\b(visa|sponsor|work authoriz|authorized to work|eligib|located in|relocat|on-site|onsite|hybrid|remote|hours per week|start date|duration|stipend|hourly|salary|\$\d|background check|must be (18|able))\b/i;
+const LOGISTICS = /\b(visa|sponsor|work authoriz|authorized to work|eligib|located in|relocat|on-site|onsite|hybrid|remote|hours per week|start date|duration|stipend|hourly|salary|\$\d|background check|must be (18|able)|proof of completion|submit(ted)? with (the|your) application|certificate of completion)\b/i;
 const COMPANY = /\b(our mission|we are|we're|our team|join us|we believe|every day|billion people|tens of millions of people come)\b/i;
+// Describes who the posting is aimed at, not something a résumé can demonstrate.
+const AUDIENCE = /\b(best suited (to|for)|transitioning (out of|from) (the )?(military|service|active duty)|first (full-time|civilian) (job|role|career)|looking (for|to move into) your first|finishing or (have )?just finished|don['’]t yet have (several )?years)\b/i;
+// Philosophy / culture copy written in the second person ("your job isn't done when…").
+const NARRATIVE = /\b(isn['’]t done when|is not done when|survives you|what you(['’]ve)? learned|isn['’]t landing|your (job|work) (isn['’]t|is not|doesn['’]t)|we (believe|think) (that )?you)\b/i;
 const DEGREE = /\b(degree|bachelor|b\.?[as]\.?|pursuing|enrolled|graduat|undergraduate|master|phd)\b/i;
 
 // ── Capability vocabulary ───────────────────────────────────────────────
@@ -293,8 +297,8 @@ function normalize(s) { return String(s).toLowerCase().replace(/[^a-z0-9+#/ ]/g,
 // this deterministic pass overrides obvious misclassifications.
 function classify(item) {
   const s = item.statement || "";
-  if (LOGISTICS.test(s)) return "logistics";
-  if (COMPANY.test(s) && !(item.capabilities || []).length) return "company_language";
+  if (LOGISTICS.test(s) || AUDIENCE.test(s)) return "logistics";
+  if ((COMPANY.test(s) || NARRATIVE.test(s)) && !(item.capabilities || []).length) return "company_language";
   if (SUBJECTIVE.test(s) && !/\b(sql|python|research|analy[st]|experiment|data|metrics)/i.test(s)) return "subjective_trait";
   if (CATEGORIES.includes(item.category)) return item.category;
   return "responsibility";
@@ -569,6 +573,7 @@ function selectSkills(bank, track, jd, max = 12) {
 // ── Missing-item verdicts ───────────────────────────────────────────────
 const CAP_KIND = { scale_millions: "scale", degree_related_field: "eligibility", graduate_enrollment: "degree_level" };
 function missingVerdict(item, bank) {
+  if (isDeclined(bank, questionKey(item))) return { verdict: "Not evidenced — do not add", why: "you confirmed you don't have this" };
   const cap = item.capability;
   const kind = CAP_KIND[cap] || (CAPABILITIES[cap] ? "activity" : "skill");
   const prohibited = (bank?.entries || []).some((e) => (e.prohibited || []).some((p) => cap && normalize(p).includes(normalize(cap.replace(/_/g, " ")).split(" ")[0])));
@@ -599,7 +604,7 @@ function evaluate(extracted, doc, opts = {}) {
       const r = c === "__keywords__" ? evaluateCapability("__unknown__", units, raw.keywords || []) : evaluateCapability(c, units, raw.keywords || []);
       const item = { statement: raw.statement, category, status: r.status, capability: c === "__keywords__" ? null : c, label: c === "__keywords__" ? raw.statement : r.label, evidence: r.evidence, where: r.where, reason: r.reason, confidence: r.confidence, evidenceType: r.evidenceType === "direct" ? "direct" : r.evidenceType ? "equivalent" : null, results: [r] };
       if (r.status === "missing") Object.assign(item, missingVerdict(item, bank));
-      if (!item.capability && r.status === "missing") Object.assign(item, { verdict: "Needs candidate confirmation", why: "outside the evidence vocabulary; phrase not found on the résumé" });
+      if (!item.capability && r.status === "missing" && !isDeclined(bank, questionKey(item))) Object.assign(item, { verdict: "Needs candidate confirmation", why: "outside the evidence vocabulary; phrase not found on the résumé" });
       items.push(item);
     }
   }
@@ -716,12 +721,92 @@ function applicationVerdict(result, qc) {
   return { verdict: "Ready with caveats", why: `${missingReq} missing required qualification${missingReq === 1 ? "" : "s"}, readiness ${result.readiness}, ${qc?.warnings || 0} warning${(qc?.warnings || 0) === 1 ? "" : "s"}` };
 }
 
-// Questions the candidate can answer to strengthen the résumé (never auto-filled).
-function suggestedQuestions(result, bank) {
-  const qs = [];
-  for (const i of result?.missing || []) if (i.verdict === "Needs candidate confirmation") qs.push(`Have you ${(i.label || i.statement).replace(/^[A-Z]/, (c) => c.toLowerCase())}? If so: where, when, and any numbers.`);
-  for (const e of bank?.entries || []) for (const q of e.needsConfirmation || []) qs.push(`${e.org}: ${q}`);
-  return [...new Set(qs)];
+// ── Questions the candidate can answer (never auto-filled) ──────────────
+// A question is a gap the whole evidence bank can't back. What the candidate answers is their own
+// claim: it is drafted into a bullet, reviewed by them, and stored as a fact — nothing is inferred.
+const questionKey = (item) => (item.capability ? `cap:${item.capability}` : `stmt:${normalize(item.statement || item.label || "").slice(0, 80)}`);
+const isDeclined = (bank, key) => (bank?.declined || []).some((d) => d.key === key);
+const isAnswered = (bank, key) => (bank?.answered || []).includes(key);
+
+function suggestedQuestionItems(result, bank) {
+  const out = []; const seen = new Set();
+  for (const i of result?.missing || []) {
+    if (i.verdict !== "Needs candidate confirmation") continue;
+    const key = questionKey(i);
+    if (seen.has(key) || isDeclined(bank, key) || isAnswered(bank, key)) continue;
+    seen.add(key);
+    out.push({ key, source: "posting", label: i.label || i.statement, statement: i.statement, capability: i.capability || null });
+  }
+  for (const e of bank?.entries || []) for (const q of e.needsConfirmation || []) {
+    const key = `nc:${e.id}:${normalize(q).slice(0, 80)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ key, source: "bank", entryId: e.id, label: `${e.org}: ${q}`, statement: q, question: q, capability: null });
+  }
+  return out;
+}
+const questionText = (q) => (q.source === "bank" ? q.label : `Do you have experience with “${q.label}”? If so: where, when, and any numbers.`);
+function suggestedQuestions(result, bank) { return suggestedQuestionItems(result, bank).map(questionText); }
+
+// Merges the candidate's saved answers into a bank without mutating it. Idempotent by fact id, so the
+// same answers can be re-applied to a newer built-in bank and never duplicate.
+function applyAnswers(bank, overlay) {
+  if (!bank || !overlay) return bank;
+  const out = JSON.parse(JSON.stringify(bank));
+  for (const { entryId, fact } of overlay.facts || []) {
+    const e = out.entries.find((x) => x.id === entryId);
+    if (!e || !fact?.id || e.facts.some((f) => f.id === fact.id)) continue;
+    e.facts.push(JSON.parse(JSON.stringify(fact)));
+  }
+  for (const r of overlay.resolved || []) {
+    const e = out.entries.find((x) => x.id === r.entryId);
+    if (e) e.needsConfirmation = (e.needsConfirmation || []).filter((q) => q !== r.question);
+  }
+  const declined = [...(out.declined || [])];
+  for (const d of overlay.declined || []) if (!declined.some((x) => x.key === d.key)) declined.push({ key: d.key, label: d.label });
+  if (declined.length) out.declined = declined;
+  const answered = [...new Set([...(out.answered || []), ...(overlay.answered || [])])];
+  if (answered.length) out.answered = answered;
+  return out;
+}
+
+// Numbers and tools a piece of text itself states — what a fact built from it is allowed to mention.
+function statedTerms(text) {
+  const t = String(text || "");
+  const metrics = [];
+  for (const m of t.matchAll(/\d[\d,]*(?:\.\d+)?\s*(?:%|\+|k|x|-day|-week|-month)?/gi)) if (normalizeMetric(m[0])) metrics.push(m[0].trim());
+  const tools = [];
+  for (const m of t.matchAll(TOOL_WORDS)) {
+    if (m[0].toLowerCase() === "r" && !/\bin R\b|\busing R\b|\bR\b(?= using|,| and)/.test(t)) continue;
+    tools.push(m[0]);
+  }
+  return { metrics: [...new Set(metrics)], tools: [...new Set(tools)] };
+}
+
+// A model-drafted bullet may only contain numbers and tools the candidate's own answer contains.
+function validateDraft(draft, answer) {
+  const text = String(draft || "").trim();
+  if (!text) return { ok: false, problems: ["empty draft"] };
+  const problems = [];
+  if (text.length > 220) problems.push("longer than 220 characters");
+  const ans = String(answer || "");
+  const answerNums = [...ans.matchAll(/\d[\d,]*(?:\.\d+)?\s*(?:%|\+|k|x)?/gi)].map((m) => normalizeMetric(m[0])).filter(Boolean);
+  const { metrics, tools } = statedTerms(text);
+  for (const m of metrics) {
+    const n = normalizeMetric(m);
+    if (!answerNums.some((a) => a === n || a.replace(/\+$/, "") === n.replace(/\+$/, ""))) problems.push(`number “${m}” is not in your answer`);
+  }
+  for (const t of tools) {
+    const esc = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (!new RegExp(`(^|[^a-z0-9])${esc}([^a-z0-9]|$)`, "i").test(ans)) problems.push(`tool “${t}” is not in your answer`);
+  }
+  return { ok: problems.length === 0, problems };
+}
+
+// Capabilities the text itself evidences — used to tag a new fact so tailoring can find it.
+function inferTags(text) {
+  const units = resumeUnits({ experience: [{ org: "x", bullets: [text] }], projects: [], education: {}, skills: {} });
+  return Object.keys(CAPABILITIES).filter((id) => !CAPABILITIES[id].section && !CAPABILITIES[id].degreeLevel && evaluateCapability(id, units).status === "matched");
 }
 
 // ── Fact guard for tailored output ──────────────────────────────────────
@@ -788,6 +873,6 @@ function validateNote(text, { limit = NOTE_LIMIT, name = "" } = {}) {
   return { text: t, length: t.length, ok: t.length <= limit && !BANNED_OUTREACH.test(t) && !/\[name\]/i.test(t), issues, hasValueProp: VALUE_PROP.test(t) };
 }
 
-const api = { SCORING_VERSION, WEIGHTS, CATEGORIES, CAPABILITIES, ROLE_WEIGHTS, TRACKS, TRACK_ORDER, TRACK_SKILL_PRIORITY, TRACK_CAP_WEIGHTS, classifyTrack, detectRoleType, orderForTrack, isChronological, duplicateBullets, dedupeSelection, copiedFromPosting, selectFacts, selectSkills, classifySkillGroup, regroupSkills, missingVerdict, qualityControl, applicationVerdict, suggestedQuestions, jaccard, evaluate, evaluateCapability, classify, bulletQuality, rankEntries, resumeUnits, factGuard, validateNote, shortenNote, fillName, NOTE_LIMIT, BANNED_OUTREACH };
+const api = { SCORING_VERSION, WEIGHTS, CATEGORIES, CAPABILITIES, ROLE_WEIGHTS, TRACKS, TRACK_ORDER, TRACK_SKILL_PRIORITY, TRACK_CAP_WEIGHTS, classifyTrack, detectRoleType, orderForTrack, isChronological, duplicateBullets, dedupeSelection, copiedFromPosting, selectFacts, selectSkills, classifySkillGroup, regroupSkills, questionKey, isDeclined, suggestedQuestionItems, questionText, applyAnswers, statedTerms, validateDraft, inferTags, missingVerdict, qualityControl, applicationVerdict, suggestedQuestions, jaccard, evaluate, evaluateCapability, classify, bulletQuality, rankEntries, resumeUnits, factGuard, validateNote, shortenNote, fillName, NOTE_LIMIT, BANNED_OUTREACH };
 if (typeof module !== "undefined") module.exports = api;
 if (typeof window !== "undefined") window.Scoring = api;
