@@ -25,3 +25,5 @@ replay_pid*
 
 # generated demo data for agents/
 data/
+__pycache__/
+.pytest_cache/
