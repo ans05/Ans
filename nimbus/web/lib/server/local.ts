@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   ANALYTICS_EVENT_NAMES,
+  applyFlightDelays,
   atLocalTime,
   buildChecklist,
   buildDayTimeline,
@@ -119,8 +120,11 @@ const todayKey = (trip: Trip): DayKey => {
   return inDestination ? inDestination.date : dayKeyOf(t, trip.homeZone);
 };
 
+/** The trip as it stands today: reported flight delays push travel blocks later. */
+const currentTrip = (s: LocalState): Trip => applyFlightDelays(s.trip);
+
 const focusWindows = (s: LocalState): FocusWindow[] =>
-  detectFocusWindows(s.trip.travelBlocks, s.meetings);
+  detectFocusWindows(currentTrip(s).travelBlocks, s.meetings);
 
 const relativeLabel = (minutes: number): string => {
   if (Math.abs(minutes) < 1) return "now";
@@ -165,7 +169,7 @@ const dayLabelFor = (day: DayKey): string => {
 };
 
 const focusWindowView = (s: LocalState, w: FocusWindow): FocusWindowView => {
-  const block = s.trip.travelBlocks.find((b) => b.id === w.blockId);
+  const block = currentTrip(s).travelBlocks.find((b) => b.id === w.blockId);
   const zone =
     s.trip.days.find((d) => d.date === dayKeyOf(w.start, d.zone))?.zone ?? s.trip.homeZone;
   const day = dayKeyOf(w.start, zone);
@@ -217,7 +221,7 @@ class LocalNimbusApi implements NimbusApi {
     const timeline = buildDayTimeline({
       date: dayView.date,
       zone,
-      travelBlocks: s.trip.travelBlocks,
+      travelBlocks: currentTrip(s).travelBlocks,
       meetings: s.meetings,
       focusWindows: windows,
       now: now(),
@@ -233,7 +237,7 @@ class LocalNimbusApi implements NimbusApi {
     for (const p of timeline.travel) label(p.item.id, p.item.start, p.item.end, p.item.flightId);
     for (const p of timeline.work) label(p.item.id, p.item.start, p.item.end);
     for (const p of timeline.focus) {
-      const block = s.trip.travelBlocks.find((b) => b.id === p.item.blockId);
+      const block = currentTrip(s).travelBlocks.find((b) => b.id === p.item.blockId);
       label(p.item.id, p.item.start, p.item.end, block?.flightId);
     }
     const clashIds = findClashes(s.meetings, s.trip).map((c) => c.meeting.id);
@@ -299,7 +303,7 @@ class LocalNimbusApi implements NimbusApi {
   async getPrep(): Promise<PrepView> {
     const s = state();
     const checklist = buildChecklist({
-      trip: s.trip,
+      trip: currentTrip(s),
       tasks: s.tasks,
       assignments: s.assignments,
       focusWindows: focusWindows(s),
@@ -350,7 +354,7 @@ class LocalNimbusApi implements NimbusApi {
       leavePlan: leave?.plan ?? null,
       clashes: findClashes(s.meetings, s.trip),
       checklist: buildChecklist({
-        trip: s.trip,
+        trip: currentTrip(s),
         tasks: s.tasks,
         assignments: s.assignments,
         focusWindows: windows,

@@ -2,7 +2,7 @@
 
 A calm travel-and-productivity companion. Nimbus merges your calendar and your trip into one timeline, finds the time you can actually use while travelling, and warns you before a meeting lands at 2 am in your new time zone.
 
-> Status: **Phase 1 of 5** — the full UI runs locally against a realistic sample week. Core-algorithm tests, the AWS backend, Claude-written reschedule notes, and the metrics page follow in later phases.
+> Status: **Phase 2 of 5** — the full UI runs locally against a realistic sample week, and the core algorithms are covered by unit tests. The AWS backend, Claude-written reschedule notes, and the metrics page follow in later phases.
 
 ## The problem
 
@@ -49,6 +49,17 @@ npm run test             # core algorithm tests (Vitest)
 npm run build            # production build of the web app
 ```
 
+### Tests
+
+The core package has a test file per module (`packages/core/src/*.test.ts`). The interesting cases:
+
+- **Focus windows**: a gap of exactly 20 minutes is kept and 19 is dropped; overlapping and touching meetings merge; a meeting that overlaps the start of a block shifts the window's id (`gate@15`), so an assignment never silently moves to a different gap; your own task blocks don't split a window.
+- **Time zone shield**: the 10 pm and 7 am boundaries are exact (a meeting ending at 10:00 pm is fine, one ending 10:01 pm is not); meetings that cross midnight count; the destination's own DST change is followed (a 3 pm Pacific meeting is 11 pm in London one week and 10 pm the next); the suggested alternative is the first hour inside working hours in both zones, including the last hour of the day.
+- **Timeline**: an overnight flight is clipped at midnight on the departure day and starts at midnight, in the arrival zone, on the arrival day; positions use the wall clock, so a 25-hour day still lines up with its hour labels.
+- **Leave-now**: buffers by domestic or international, delays push the leave time, and the status steps through later, soon, now, late, departed at the right minutes.
+- **Offline prep**: opens at 5 pm the evening before in the departure zone and closes at departure; items come only from tasks planned on that flight.
+- **Attention**: leaving wins over clashes, which win over the checklist; the checklist only counts while it is open and unfinished.
+
 The demo is pinned to a fixed "now" (`NIMBUS_DEMO_NOW` in `.env`) so the sample week always looks the same: the morning of a San Francisco → London flight, with three meetings that will land overnight in London. Set it to `real` to use the clock.
 
 ## How it is put together
@@ -63,6 +74,7 @@ nimbus/
 │       ├── timezoneShield.ts  10 pm – 7 am clashes, alternative slots, reschedule template
 │       ├── offlinePrep.ts     checklist from the tasks planned for a flight
 │       ├── leaveNow.ts        departure − airport buffer − ride − contingency
+│       ├── flights.ts         shift travel blocks when a flight is delayed
 │       ├── attention.ts       the one thing the mascot should point at
 │       ├── sources/           CalendarSource / FlightSource / TaskSource interfaces + mock impls
 │       └── mock/sample-week.json
@@ -87,8 +99,8 @@ Two seams keep the integrations swappable:
 
 ## Roadmap
 
-1. ~~UI with mock data~~ (this phase)
-2. Core logic hardening + unit tests for focus-window detection and time-zone logic
+1. ~~UI with mock data~~
+2. ~~Core logic hardening + unit tests for focus-window detection and time-zone logic~~ (this phase)
 3. AWS backend: CDK, API Gateway + Lambda, single-table DynamoDB, EventBridge Scheduler alerts
 4. Claude on Amazon Bedrock for task suggestions and reschedule notes
 5. Analytics events in DynamoDB and the `/metrics` page with the north-star metric, focus minutes planned per trip

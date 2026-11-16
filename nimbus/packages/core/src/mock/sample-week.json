@@ -90,8 +90,8 @@
     { "id": "t-interview-qs", "title": "Prepare questions for London user interviews", "estimateMinutes": 40, "kind": "quick", "needsConnectivity": false, "offlineNeeds": ["Interview guide template"], "priority": 1, "project": "Offsite", "done": false }
   ],
   "assignments": [
-    { "windowId": "flight-vs20:0", "taskId": "t-metrics-narrative" },
-    { "windowId": "flight-vs20:0", "taskId": "t-talk-outline" },
-    { "windowId": "gate-a7:0", "taskId": "t-funnel-pr" }
+    { "windowId": "flight-vs20@0", "taskId": "t-metrics-narrative" },
+    { "windowId": "flight-vs20@0", "taskId": "t-talk-outline" },
+    { "windowId": "gate-a7@0", "taskId": "t-funnel-pr" }
   ]
 }

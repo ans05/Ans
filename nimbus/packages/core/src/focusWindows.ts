@@ -1,4 +1,4 @@
-import { intervalMinutes, subtractIntervals } from "./time";
+import { intervalMinutes, minutesBetween, subtractIntervals } from "./time";
 import type {
   Connectivity,
   FocusWindow,
@@ -55,12 +55,14 @@ export const detectFocusWindows = (
     if (!block.focusable) continue;
 
     const free = subtractIntervals(block, commitments);
-    free.forEach((interval, index) => {
+    for (const interval of free) {
       const minutes = intervalMinutes(interval);
-      if (minutes < minMinutes) return;
+      if (minutes < minMinutes) continue;
       const { suitedFor, workStyle } = classifyWindow(block.kind, minutes);
       windows.push({
-        id: `${block.id}:${index}`,
+        // Keyed by offset into the block, so an assignment never silently
+        // moves to a different gap when the meetings around it change.
+        id: `${block.id}@${minutesBetween(block.start, interval.start)}`,
         blockId: block.id,
         kind: block.kind,
         start: interval.start,
@@ -70,7 +72,7 @@ export const detectFocusWindows = (
         suitedFor,
         workStyle,
       });
-    });
+    }
   }
 
   return windows;

@@ -47,6 +47,20 @@ export const minutesIntoDay = (
 export const localHour = (value: IsoDateTime | Date, zone: Zone): number =>
   Number(formatInTimeZone(toDate(value), zone, "H"));
 
+/**
+ * Minutes shown on a wall clock in `zone`: 9:30 am → 570. Unlike
+ * `minutesIntoDay` this is unaffected by DST transitions earlier in the day,
+ * which is what a calendar grid wants.
+ */
+export const wallClockMinutes = (value: IsoDateTime | Date, zone: Zone): number => {
+  const date = toDate(value);
+  return Number(formatInTimeZone(date, zone, "H")) * 60 + Number(formatInTimeZone(date, zone, "m"));
+};
+
+/** Real length of a calendar day in `zone`: 1440, or 1380 / 1500 across a DST change. */
+export const dayLengthMinutes = (day: DayKey, zone: Zone): number =>
+  (dayEnd(day, zone).getTime() - dayStart(day, zone).getTime()) / 60_000;
+
 /** How many hours `toZone` is ahead of `fromZone` at a given instant (negative = behind). */
 export const zoneOffsetDifferenceHours = (
   value: IsoDateTime | Date,

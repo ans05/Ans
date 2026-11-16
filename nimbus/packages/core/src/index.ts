@@ -6,6 +6,7 @@ export * from "./taskFit";
 export * from "./timezoneShield";
 export * from "./offlinePrep";
 export * from "./leaveNow";
+export * from "./flights";
 export * from "./attention";
 export * from "./analytics/events";
 export * from "./sources/types";

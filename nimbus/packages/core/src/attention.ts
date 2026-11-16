@@ -23,12 +23,14 @@ export const deriveAttention = ({
   if (leavePlan && (leavePlan.status === "soon" || leavePlan.status === "now" || leavePlan.status === "late")) {
     const at = formatTime(leavePlan.leaveAt, leavePlan.flight.from.zone);
     const code = leavePlan.flight.from.code;
+    const delay = leavePlan.flight.delayMinutes ?? 0;
+    const delayNote = delay > 0 ? `${leavePlan.flight.number} is delayed ${delay}m. ` : "";
     const message =
       leavePlan.status === "late"
-        ? `You should be on your way to ${code}.`
+        ? `${delayNote}You should be on your way to ${code}.`
         : leavePlan.status === "now"
-          ? `Time to leave for ${code}.`
-          : `Leave for ${code} by ${at}.`;
+          ? `${delayNote}Time to leave for ${code}.`
+          : `${delayNote}Leave for ${code} by ${at}.`;
     return { id: `leave:${leavePlan.flight.id}`, tone: "warning", message, href: "/", cta: "See the plan" };
   }
 

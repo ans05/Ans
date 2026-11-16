@@ -1,4 +1,11 @@
-import { dayEnd, dayKeyOf, dayStart, MINUTES_PER_DAY, minutesIntoDay, toDate } from "./time";
+import {
+  dayEnd,
+  dayKeyOf,
+  dayStart,
+  MINUTES_PER_DAY,
+  toDate,
+  wallClockMinutes,
+} from "./time";
 import type {
   DayKey,
   FocusWindow,
@@ -9,7 +16,11 @@ import type {
   Zone,
 } from "./types";
 
-/** An item placed on a day's vertical axis, in minutes from local midnight. */
+/**
+ * An item placed on a day's vertical axis. Positions are wall-clock minutes
+ * (9:30 am → 570) so the grid stays aligned with its hour labels even on a
+ * day with a DST change.
+ */
 export interface Positioned<T extends TimeInterval> {
   item: T;
   startMinute: number;
@@ -46,7 +57,8 @@ export interface BuildDayTimelineInput {
   minEndHour?: number;
 }
 
-const clipToDay = <T extends TimeInterval>(
+/** Place the items that touch `date` on its wall-clock axis, clipped to the day. */
+export const clipToDay = <T extends TimeInterval>(
   items: T[],
   date: DayKey,
   zone: Zone,
@@ -58,21 +70,22 @@ const clipToDay = <T extends TimeInterval>(
     .filter((item) => {
       const s = toDate(item.start).getTime();
       const e = toDate(item.end).getTime();
-      return s < end && e > start;
+      return s < end && e > start && e > s;
     })
     .map((item) => {
-      const startMinute = Math.max(0, minutesIntoDay(item.start, date, zone));
-      const rawEnd = minutesIntoDay(item.end, date, zone);
-      const dayLength = (end - start) / 60_000;
+      const s = toDate(item.start).getTime();
+      const e = toDate(item.end).getTime();
+      const continuesFromPrevious = s < start;
+      const continuesToNext = e > end;
       return {
         item,
-        startMinute,
-        endMinute: Math.min(dayLength, rawEnd),
-        continuesFromPrevious: toDate(item.start).getTime() < start,
-        continuesToNext: toDate(item.end).getTime() > end,
+        startMinute: continuesFromPrevious ? 0 : wallClockMinutes(item.start, zone),
+        endMinute: e >= end ? MINUTES_PER_DAY : wallClockMinutes(item.end, zone),
+        continuesFromPrevious,
+        continuesToNext,
       };
     })
-    .sort((a, b) => a.startMinute - b.startMinute);
+    .sort((a, b) => a.startMinute - b.startMinute || b.endMinute - a.endMinute);
 };
 
 /** Merge travel and work into one day with a shared axis. */
@@ -97,8 +110,7 @@ export const buildDayTimeline = ({
   const axisStart = Math.max(0, Math.floor(earliest / 60) * 60);
   const axisEnd = Math.min(MINUTES_PER_DAY, Math.ceil(latest / 60) * 60);
 
-  const nowMinute =
-    dayKeyOf(now, zone) === date ? minutesIntoDay(now, date, zone) : null;
+  const nowMinute = dayKeyOf(now, zone) === date ? wallClockMinutes(now, zone) : null;
 
   return { date, zone, axisStart, axisEnd, travel, work, focus, nowMinute };
 };
