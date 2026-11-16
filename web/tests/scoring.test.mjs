@@ -291,3 +291,10 @@ test("a drafted bullet may only contain numbers and tools the candidate's answer
   assert.deepEqual(S.statedTerms("Built a dashboard in Python for 20+ analysts"), { metrics: ["20+"], tools: ["Python"] });
   assert.ok(S.inferTags("Designed and analyzed A/B tests for an iOS app used by 100+ athletes").includes("experimentation"));
 });
+
+// Built-in facts should read like a person wrote them: concrete verbs and plain nouns. These are the
+// phrases that made earlier wording read as machine-written; this keeps the bank from drifting back.
+test("built-in facts avoid the stock phrases that make a bullet read as AI-written", () => {
+  const stock = /translat(ed|ing) |high-signal|actionable|leverag(e|ed|ing)|robust|seamless|scalable|reproducible|pinpoint|surfacing|spearhead|\u2014/i;
+  for (const e of EVIDENCE_BANK.entries) for (const f of e.facts) assert.doesNotMatch(f.text, stock, `${f.id}: ${f.text}`);
+});
