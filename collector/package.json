@@ -1,0 +1,7 @@
+{
+  "name": "afterhours-collector",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda collector for AFTERHOURS usage events. AWS SDK v3 is provided by the Lambda runtime."
+}

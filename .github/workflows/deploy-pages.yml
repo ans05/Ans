@@ -43,6 +43,9 @@ jobs:
         env:
           # Pages serves the site under /<repo>/, so assets need that prefix.
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # Optional: set these under Settings -> Secrets and variables -> Actions -> Variables.
+          VITE_ANALYTICS_ENDPOINT: ${{ vars.VITE_ANALYTICS_ENDPOINT }}
+          VITE_FEEDBACK_URL: ${{ vars.VITE_FEEDBACK_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: afterhours/dist

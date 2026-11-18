@@ -1,0 +1,46 @@
+# Deploy with the AWS SAM CLI:  sam build && sam deploy --guided
+# Then set the printed FunctionUrl as the repo variable VITE_ANALYTICS_ENDPOINT.
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AFTERHOURS usage-event collector (Lambda Function URL + DynamoDB)
+
+Parameters:
+  AllowedOrigin:
+    Type: String
+    Description: Origin of the deployed site, e.g. https://<user>.github.io
+
+Resources:
+  EventsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: pk, AttributeType: S }
+        - { AttributeName: sk, AttributeType: S }
+      KeySchema:
+        - { AttributeName: pk, KeyType: HASH }
+        - { AttributeName: sk, KeyType: RANGE }
+
+  CollectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: handler.handler
+      Runtime: nodejs22.x
+      MemorySize: 128
+      Timeout: 5
+      ReservedConcurrentExecutions: 5   # caps cost and abuse
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref EventsTable
+      Policies:
+        - DynamoDBWritePolicy: { TableName: !Ref EventsTable }
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [!Ref AllowedOrigin]
+          AllowMethods: [POST]
+          AllowHeaders: [content-type]
+
+Outputs:
+  FunctionUrl:
+    Value: !GetAtt CollectorFunctionUrl.FunctionUrl

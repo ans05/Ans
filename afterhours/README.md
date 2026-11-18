@@ -175,6 +175,23 @@ through serialisable actions. A collaborative version would implement
 whole documents, and use `revision` for ordering or conflict resolution.
 Nothing in the editor or renderer would need to change.
 
+## Product analytics
+
+`src/analytics/` measures how the studio is used, so product decisions can be
+backed by data. Events record only *which feature* was used (never artist or
+title text, colours or file names) and stay in this browser's localStorage.
+Set `VITE_ANALYTICS_ENDPOINT` at build time to also POST each event to a
+collector you control.
+
+- `tracker.ts` is the local-first event log (random per-page-load session id).
+- `metrics.ts` is a pure, tested module: funnel (edited -> audio loaded ->
+  exported), median time to first export, preset mix, and edits per session
+  for exporters vs non-exporters.
+- The footer's **Download my usage data (CSV)** exports
+  `timestamp,session,event,prop` rows for pandas, SQL or a spreadsheet.
+
+See `PRODUCT.md` for the case-study template built on these metrics.
+
 ## Accessibility and motion
 
 Every control is a native form element with a label; the artwork is focusable
