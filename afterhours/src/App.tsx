@@ -20,6 +20,7 @@ interface Notice {
   id: number;
 }
 
+const FEEDBACK_URL: string | undefined = import.meta.env.VITE_FEEDBACK_URL || undefined;
 const ISSUE_DATE = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(new Date());
 
 export default function App() {
@@ -53,6 +54,21 @@ export default function App() {
     restored ? { kind: 'info', text: 'Restored your last design from this browser.', id: 0 } : null,
   );
   const [exporting, setExporting] = useState(false);
+  const [showHint, setShowHint] = useState(() => {
+    try {
+      return localStorage.getItem('afterhours.hint.dismissed') !== '1';
+    } catch {
+      return true;
+    }
+  });
+  const dismissHint = useCallback(() => {
+    setShowHint(false);
+    try {
+      localStorage.setItem('afterhours.hint.dismissed', '1');
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => savePrefs(prefs), [prefs]);
 
@@ -155,6 +171,17 @@ export default function App() {
         </div>
       </header>
 
+      {showHint ? (
+        <p className="first-run" role="note">
+          <span>
+            <strong>Start here:</strong> pick a preset, type your artist and title, then hit Export PNG.
+          </span>
+          <button type="button" className="first-run__close" onClick={dismissHint} aria-label="Dismiss tip">
+            Got it
+          </button>
+        </p>
+      ) : null}
+
       <main className="studio">
         <section className="stage" aria-label="Artwork">
           <div className="stage__bar">
@@ -200,6 +227,11 @@ export default function App() {
       <footer className="colophon">
         <span>Design rev. {design.revision} · saved in this browser</span>
         <span>Procedural graphics · Web Audio analysis · no uploads</span>
+        {FEEDBACK_URL ? (
+          <a className="colophon__link" href={FEEDBACK_URL} target="_blank" rel="noreferrer">
+            Give feedback
+          </a>
+        ) : null}
         <button type="button" className="colophon__link" onClick={onDownloadUsage}>
           Download my usage data (CSV)
         </button>

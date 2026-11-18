@@ -891,3 +891,23 @@ output {
   text-decoration: underline;
   cursor: pointer;
 }
+
+.first-run {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid currentColor;
+  font-size: 0.85rem;
+}
+
+.first-run__close {
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  font: inherit;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+}
