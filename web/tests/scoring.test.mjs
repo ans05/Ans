@@ -298,3 +298,19 @@ test("built-in facts avoid the stock phrases that make a bullet read as AI-writt
   const stock = /translat(ed|ing) |high-signal|actionable|leverag(e|ed|ing)|robust|seamless|scalable|reproducible|pinpoint|surfacing|spearhead|\u2014/i;
   for (const e of EVIDENCE_BANK.entries) for (const f of e.facts) assert.doesNotMatch(f.text, stock, `${f.id}: ${f.text}`);
 });
+
+// Claims the candidate confirmed as accurate as written on their résumé must exist as facts, so the
+// fact guard accepts them instead of replacing them with different wording.
+test("confirmed résumé claims are backed by facts and pass the fact guard", () => {
+  const confirmed = [
+    ["haas", "Designed behavioral research studies to better understand leadership, consumer decision-making, and organizational behavior"],
+    ["flourish", "Built and deployed a personalized nutrition recommendation platform using Python and SQL, increasing user engagement by 25%"],
+    ["flourish", "Developed an automated data pipeline processing 100+ research sources, improving recommendation accuracy by 15%"],
+  ];
+  for (const [id, text] of confirmed) {
+    const e = EVIDENCE_BANK.entries.find((x) => x.id === id);
+    const fact = e.facts.find((f) => f.text === text);
+    assert.ok(fact, `no fact carries: ${text}`);
+    assert.equal(S.factGuard(text, fact, e, EVIDENCE_BANK).ok, true, text);
+  }
+});

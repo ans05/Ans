@@ -83,7 +83,7 @@ const EVIDENCE_BANK = {
       verifiedTools: ["R", "Power BI"],
       tags: ["statistics", "experimentation", "user_research", "data_analysis", "stakeholder_communication", "r_language", "qualitative_research", "forecasting", "dashboards"],
       needsConfirmation: [],
-      prohibited: ["sole ownership of study design (co-designed only)", "publication claims", "equating '1,000+ responses' with '1,000+ participants' (responses ≠ unique participants)", "a specific number of studies not stated in a fact", "specific forecast accuracy numbers (not documented)"],
+      prohibited: ["sole ownership of study design (not stated)", "publication claims", "equating '1,000+ responses' with '1,000+ participants' (responses ≠ unique participants)", "a specific number of studies not stated in a fact", "specific forecast accuracy numbers (not documented)"],
       facts: [
         { id: "haas.hypotheses", result: "1,000+ regression", text: "Turned open-ended behavioral research questions into testable hypotheses, then analyzed 1,000+ participant responses in R using regression", metrics: ["1,000+"], tools: ["R"], tags: ["statistics", "data_analysis", "experimentation", "r_language"] },
         { id: "haas.factors", text: "Examined 10+ factors that influence leadership and group behavior under Professors Cameron Anderson and Angus Hildreth", metrics: ["10+"], tools: [], tags: ["user_research", "statistics"] },
@@ -93,6 +93,7 @@ const EVIDENCE_BANK = {
         { id: "haas.independent", text: "Initiated 2 self-directed projects: a 20+ data-point analysis of leadership-seeking strategies in political debates, and a study of how AI tools affect research productivity", metrics: ["2", "20+"], tools: [], tags: ["initiative", "data_analysis"] },
         { id: "haas.comms", text: "Presented data-driven stories through written reports and slide presentations, explaining behavioral research findings and statistical analyses to 2 faculty researchers and interdisciplinary teams", metrics: ["2"], tools: [], tags: ["stakeholder_communication", "written_communication", "cross_functional_collaboration"] },
         { id: "haas.forecasting", text: "Built Power BI dashboards to forecast sales and engagement trends", metrics: [], tools: ["Power BI"], tags: ["forecasting", "dashboards", "data_visualization"] },
+        { id: "haas.design", text: "Designed behavioral research studies to better understand leadership, consumer decision-making, and organizational behavior", metrics: [], tools: [], tags: ["experimentation", "user_research"] },
       ],
     },
     {
@@ -113,6 +114,8 @@ const EVIDENCE_BANK = {
         { id: "flourish.recsys", result: "recsys platform", text: "Built and launched a personalized nutrition recommendation platform, using user needs and expert-labeled data to shape the experience for end users", metrics: [], tools: [], tags: ["product_launch", "recommendation_systems", "user_research", "product_decisions"] },
         { id: "flourish.eval", result: "15% accuracy / 25% engagement", text: "Benchmarked recommendations against expert-labeled references, then used the error analysis to make product changes that improved accuracy by 15% and engagement by 25%", metrics: ["15%", "25%"], tools: [], tags: ["ml_evaluation", "data_analysis", "product_decisions", "product_analytics"] },
         { id: "flourish.feedback", text: "Incorporated feedback from 10+ SkyDeck startup seminars into agile sprints, keeping prototypes aligned with user needs and business strategy", metrics: ["10+"], tools: [], tags: ["user_research", "product_iteration"] },
+        { id: "flourish.platform", result: "25% engagement", text: "Built and deployed a personalized nutrition recommendation platform using Python and SQL, increasing user engagement by 25%", metrics: ["25%"], tools: ["Python", "SQL"], tags: ["product_launch", "recommendation_systems", "product_analytics", "python", "sql"] },
+        { id: "flourish.pipeline15", result: "15% accuracy", text: "Developed an automated data pipeline processing 100+ research sources, improving recommendation accuracy by 15%", metrics: ["100+", "15%"], tools: [], tags: ["data_engineering", "ml_evaluation"] },
         { id: "flourish.pipelines", result: "10,000+ predictions", text: "Built automated data pipelines that supported 10,000+ recommendation predictions", metrics: ["10,000+"], tools: [], tags: ["data_engineering", "scale"] },
       ],
     },
