@@ -116,7 +116,7 @@ test("Roblox workflow: tailor → score → edit → PDF → outreach", async ()
 
     // PM track: Siemens → FlourishAI → Haas → Mercor, Projects after Experience (GoalKeeper is ranked second).
     assert.match(await p.textContent("#track-detected"), /Product Management/);
-    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["Siemens Healthineers", "FlourishAI (Berkeley SkyDeck)", "Haas School of Business Lab", "Mercor"]);
+    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["Siemens Healthineers", "FlourishAI (Berkeley SkyDeck FA 24)", "Haas School of Business Lab", "Mercor"]);
     assert.equal(await p.locator("#paper .r-sec").nth(1).textContent(), "Experience");
     assert.ok(!(await p.locator("#projects-first").isChecked()));
     // Two 30% GoalKeeper bullets can't both survive; the fixture selected abtests only, so exactly one 30% bullet.
@@ -212,11 +212,11 @@ test("Roblox workflow: tailor → score → edit → PDF → outreach", async ()
     await p.click('[data-tab="job"]');
     await p.selectOption("#track-select", "ds_ml");
     await p.waitForTimeout(200);
-    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["FlourishAI (Berkeley SkyDeck)", "Haas School of Business Lab", "Mercor", "Siemens Healthineers"]);
+    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["FlourishAI (Berkeley SkyDeck FA 24)", "Haas School of Business Lab", "Mercor", "Siemens Healthineers"]);
     await p.selectOption("#track-select", "");
     // Chronological mode.
     await p.uncheck("#relevance-order"); await p.waitForTimeout(200);
-    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["Haas School of Business Lab", "Siemens Healthineers", "FlourishAI (Berkeley SkyDeck)", "Mercor"]);
+    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["Haas School of Business Lab", "Siemens Healthineers", "FlourishAI (Berkeley SkyDeck FA 24)", "Mercor"]);
     await p.check("#relevance-order");
 
     assert.deepEqual(errors, [], "no console/page errors");
@@ -263,7 +263,7 @@ test("Figma data-science workflow: DS track ordering, dedupe of the duplicate 30
     await p.click("#tailor");
     await p.waitForFunction(() => document.querySelector(".tab.active")?.dataset.tab === "score", null, { timeout: 15000 });
     await p.waitForTimeout(300);
-    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["FlourishAI (Berkeley SkyDeck)", "Haas School of Business Lab", "Mercor", "Siemens Healthineers"]);
+    assert.deepEqual(await p.locator('[data-path$=".org"]').allTextContents(), ["FlourishAI (Berkeley SkyDeck FA 24)", "Haas School of Business Lab", "Mercor", "Siemens Healthineers"]);
     // Resume Tailor now also ranks as a project for the ds_ml track, so check across all
     // project bullets rather than assuming GoalKeeper is projects[0].
     const allProjectBullets = await p.locator('[data-path^="projects."][data-path*=".bullets."]').allTextContents();
