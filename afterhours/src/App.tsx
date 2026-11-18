@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { eventsToCsv } from './analytics/metrics';
+import { createTracker } from './analytics/tracker';
+import type { AnalyticsEventName } from './analytics/events';
 import { useAudioEngine } from './audio/useAudioEngine';
 import { ArtworkCanvas, type ArtworkCanvasHandle } from './canvas/ArtworkCanvas';
 import { designFileName, downloadBlob, downloadDesignJson, readDesignFile } from './design/file';
@@ -6,6 +9,7 @@ import { loadPrefs, savePrefs, type UiPrefs } from './design/storage';
 import { audioMode } from './audio/mode';
 import { ModeBadge } from './editor/AudioSection';
 import { EditorPanel } from './editor/EditorPanel';
+import type { DesignAction } from './design/reducer';
 import { useDesign } from './hooks/useDesign';
 import { usePrefersReducedMotion } from './hooks/usePrefersReducedMotion';
 import { renderPngBlob } from './render/exportPng';
@@ -19,7 +23,28 @@ interface Notice {
 const ISSUE_DATE = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(new Date());
 
 export default function App() {
-  const { design, dispatch, restored } = useDesign();
+  const { design, dispatch: rawDispatch, restored } = useDesign();
+  const [tracker] = useState(() => createTracker());
+  useEffect(() => {
+    tracker.track('session_start');
+  }, [tracker]);
+
+  // Every edit goes through here so usage is measured in one place.
+  const dispatch = useCallback(
+    (action: DesignAction) => {
+      const map: Partial<Record<DesignAction['type'], AnalyticsEventName>> = {
+        'set-preset': 'preset_changed',
+        randomize: 'randomize',
+        'set-text': 'edit_text',
+        'set-color': 'edit_color',
+        'set-motion': 'edit_motion',
+      };
+      const name = map[action.type];
+      if (name) tracker.track(name, action.type === 'set-preset' ? action.preset : undefined);
+      rawDispatch(action);
+    },
+    [rawDispatch, tracker],
+  );
   const systemReduced = usePrefersReducedMotion();
   const [prefs, setPrefs] = useState<UiPrefs>(() => loadPrefs());
   const reduceMotion = prefs.reduceMotion ?? systemReduced;
@@ -42,7 +67,22 @@ export default function App() {
     return () => window.clearTimeout(handle);
   }, [notice]);
 
-  const audio = useAudioEngine((message) => notify('error', message));
+  const rawAudio = useAudioEngine((message) => notify('error', message));
+  const audio = useMemo(
+    () => ({
+      ...rawAudio,
+      load: async (file: File) => {
+        const ok = await rawAudio.load(file);
+        if (ok) tracker.track('audio_loaded');
+        return ok;
+      },
+      toggle: async () => {
+        await rawAudio.toggle();
+        tracker.track('audio_play');
+      },
+    }),
+    [rawAudio, tracker],
+  );
 
   const onExportPng = useCallback(async () => {
     const frame = canvasRef.current?.getFrame();
@@ -51,22 +91,24 @@ export default function App() {
     try {
       const blob = await renderPngBlob(design, frame);
       downloadBlob(blob, designFileName(design, 'png'));
+      tracker.track('export_png', design.preset);
       notify('info', 'Exported a 2048 × 2048 PNG.');
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Export failed.');
     } finally {
       setExporting(false);
     }
-  }, [design, notify]);
+  }, [design, notify, tracker]);
 
   const onSaveJson = useCallback(() => {
     try {
       downloadDesignJson(design);
+      tracker.track('save_design');
       notify('info', 'Saved the design as JSON.');
     } catch (err) {
       notify('error', err instanceof Error ? err.message : 'Save failed.');
     }
-  }, [design, notify]);
+  }, [design, notify, tracker]);
 
   const onLoadJson = useCallback(
     async (file: File) => {
@@ -76,6 +118,7 @@ export default function App() {
         return;
       }
       dispatch({ type: 'replace', design: result.design });
+      tracker.track('load_design');
       notify(
         'info',
         result.warnings.length
@@ -83,8 +126,12 @@ export default function App() {
           : `Loaded "${file.name}".`,
       );
     },
-    [dispatch, notify],
+    [dispatch, notify, tracker],
   );
+
+  const onDownloadUsage = useCallback(() => {
+    downloadBlob(new Blob([eventsToCsv(tracker.events())], { type: 'text/csv' }), 'afterhours-usage.csv');
+  }, [tracker]);
 
   const toggleAnimating = useCallback(() => setPrefs((p) => ({ ...p, animating: !p.animating })), []);
   const setReduceMotion = useCallback(
@@ -153,6 +200,9 @@ export default function App() {
       <footer className="colophon">
         <span>Design rev. {design.revision} · saved in this browser</span>
         <span>Procedural graphics · Web Audio analysis · no uploads</span>
+        <button type="button" className="colophon__link" onClick={onDownloadUsage}>
+          Download my usage data (CSV)
+        </button>
       </footer>
 
       <div className="notice-area" aria-live="polite">

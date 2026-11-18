@@ -881,3 +881,13 @@ output {
     animation-duration: 0.01ms !important;
   }
 }
+
+.colophon__link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
