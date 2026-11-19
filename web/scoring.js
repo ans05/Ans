@@ -828,6 +828,12 @@ function factGuard(bullet, fact, entry, bank) {
     if (t === "r" && !/\bin R\b|\busing R\b|\bR\b(?= using|,| and)/.test(bullet)) continue;
     if (!allowedTools.has(t) && !/\b(etl)\b/.test(t)) problems.push(`tool “${m[0]}” is not verified for this fact`);
   }
+  // A rewrite or hand edit may not misname an organization: if a bullet starts naming one (its first two
+  // words), it must carry the canonical spelling.
+  for (const name of bank?.canonicalNames || []) {
+    const lead = name.split(/\s+/).slice(0, 2).join(" ").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`\\b${lead}\\b`, "i").test(bullet) && !String(bullet).includes(name)) problems.push(`organization name should read “${name}”`);
+  }
   for (const p of [...(entry?.prohibited || []), ...(bank?.prohibited || [])]) {
     const key = p.replace(/[^a-z0-9 ]/gi, " ").trim().split(/\s+/).slice(0, 2).join(" ");
     if (key && normalize(bullet).includes(normalize(key))) problems.push(`prohibited: ${p}`);

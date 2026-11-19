@@ -54,7 +54,7 @@ const TAILOR = {
     { id: "goalkeeper", bullets: [
       { factId: "gk.ownership", text: "Owned the full development cycle — user research, roadmap, build, launch, and iteration — as founder of a 100+ user product" },
       { factId: "gk.abtests", text: "Designed and analyzed 12 A/B tests for an iOS app used by 100+ athletes, increasing average session duration by 30%" },
-      { factId: "gk.nami", text: "Led product strategy and a partnership with NAMI, driving adoption to 100+ athletes and iterating on community feedback" },
+      { factId: "gk.nami", text: "Led product strategy and a partnership with the National Alliance of Mental Health (NAMI), driving adoption to 100+ athletes and iterating on community feedback" },
     ] },
   ],
   skills: { "Product & Analytics": "product roadmapping, user research, competitive analysis, A/B testing, product analytics, Figma", Languages: "Python, SQL, R, Swift" },
@@ -108,6 +108,9 @@ test("Roblox workflow: tailor → score → edit → PDF → outreach", async ()
     // Fact guard: the invented "12 A/B tests" must be replaced by the verified fact text.
     const bullets = await p.locator("#paper .bl .txt").allTextContents();
     assert.ok(!bullets.some((t) => /12 A\/B tests/.test(t)), "invented count must not appear");
+    // A misnamed organization in the model's reply is replaced by the verified wording.
+    assert.ok(!bullets.some((t) => /Alliance of Mental Health/.test(t)), "misnamed organization must not appear");
+    assert.ok(bullets.some((t) => /National Alliance on Mental Illness \(NAMI\)/.test(t)), "verified name appears instead");
     assert.ok(bullets.some((t) => /Designed and analyzed A\/B tests for an iOS app used by 100\+ athletes/.test(t)));
     assert.ok(!bullets.some((t) => /^[A-Za-z &/-]{1,40}:\s/.test(t)), "no label prefixes");
     // Skill not in bank ("Figma") is dropped.

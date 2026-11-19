@@ -314,3 +314,16 @@ test("confirmed résumé claims are backed by facts and pass the fact guard", ()
     assert.equal(S.factGuard(text, fact, e, EVIDENCE_BANK).ok, true, text);
   }
 });
+
+// A rewrite or hand edit must not misname an organization (the NAMI name was wrong on a résumé draft).
+test("fact guard rejects a misspelled canonical organization name and accepts the right one", () => {
+  const e = EVIDENCE_BANK.entries.find((x) => x.id === "goalkeeper"), f = e.facts.find((x) => x.id === "gk.nami");
+  const bad = S.factGuard("Led product strategy and a partnership with the National Alliance of Mental Health (NAMI), driving adoption to 100+ athletes", f, e, EVIDENCE_BANK);
+  assert.equal(bad.ok, false);
+  assert.ok(bad.problems.some((p) => /National Alliance on Mental Illness/.test(p)), bad.problems.join("; "));
+  assert.equal(S.factGuard(f.text, f, e, EVIDENCE_BANK).ok, true, "the verified fact text itself passes");
+  assert.equal(S.factGuard("Led product strategy and a partnership with NAMI, driving adoption to 100+ athletes", f, e, EVIDENCE_BANK).ok, true, "the abbreviation alone is fine");
+  // And it blocks export when a bullet tied to the fact carries the wrong name.
+  const doc = { ...DEFAULT_RESUME, projects: DEFAULT_RESUME.projects.map((p) => (p.id === "goalkeeper" ? { ...p, bullets: ["Led product strategy and a partnership with the National Alliance of Mental Health (NAMI), driving adoption to 100+ athletes"], factIds: ["gk.nami"] } : p)) };
+  assert.ok(S.qualityControl(doc, { bank: EVIDENCE_BANK }).issues.some((i) => i.severity === "block" && /organization name should read/.test(i.message)));
+});

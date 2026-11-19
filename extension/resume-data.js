@@ -14,6 +14,8 @@ const EVIDENCE_BANK = {
   // Applies to every entry, regardless of which one a bullet is under — confirmed 2026-09-30:
   // don't claim these tools until explicitly confirmed, even if a future edit adds them elsewhere.
   prohibited: ["Microsoft PowerPoint", "Microsoft Word", "Jira"],
+  // Organization names a bullet must spell exactly this way if it mentions them at all.
+  canonicalNames: ["National Alliance on Mental Illness"],
   profile: {
     name: "Aneesh Srirambhatla",
     phone: "424-390-9605",
